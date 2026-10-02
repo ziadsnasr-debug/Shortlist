@@ -2,7 +2,7 @@
 
 Goal: turn the working synthetic workflow into a calm, precise, trustworthy recruiter tool that a person fluent in Linear, Stripe or Vercel would trust on first use. No feature logic, scoring rule or security gate changes. This is a presentation, flow and interaction plan.
 
-Status: phase 0 implemented on branch `codex/ui-phase-0` (tokens, dark theme, Geist, logo, primitives, design gallery, candidate labels, PRODUCT.md and DESIGN.md). Phases 1 to 5 are proposed.
+Status: phase 0 implemented on branch `codex/ui-phase-0` (tokens, dark theme, Geist, logo, primitives, design gallery, candidate labels, PRODUCT.md and DESIGN.md). Phase 1 implemented on branch `codex/ui-phase-1`, stacked on phase 0: an address for every page and step, sidebar with progress rings and account menu (theme, help, sign out), mobile top bar with a slide-in menu, link-based stepper with locked states, vacancies list with a specific next action, new-vacancy page, role-aware actions, and redesigned sign-in and MFA. Phases 2 to 5 are proposed.
 
 Note: PR #3 (`feat/ui-redesign`, merged 2 October 2026) landed while this plan was being written. It added an ivory/charcoal/cobalt palette, criterion weight bars, a batch progress strip, confirmed-score bars, a comparison matrix for up to three selected applications, focusable source passages and CSS motion with reduced-motion overrides. Phase 0 keeps those layouts and features and moves their colours onto the navy/teal tokens below (decision confirmed 2 October 2026). Audit items 7 and 10 are therefore partly addressed already; later phases refine rather than rebuild them.
 

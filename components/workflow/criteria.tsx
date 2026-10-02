@@ -20,7 +20,9 @@ export function Criteria({
   busy,
   onNext,
   onDirty,
+  canEdit,
 }: {
+  canEdit: boolean;
   vacancy: PublicVacancy;
   batch: PublicBatch;
   send: Send;
@@ -31,6 +33,7 @@ export function Criteria({
 }) {
   const [rubric, setRubric] = useState<Criterion[]>(batch.rubric),
     [dirty, setDirty] = useState(false);
+  const editable = !batch.published && canEdit;
   const total = rubric.reduce((n, c) => n + c.points, 0);
   function update(index: number, key: keyof Criterion, value: unknown) {
     setDirty(true);
@@ -62,13 +65,19 @@ export function Criteria({
         <Badge variant="secondary">{total} / 100 points</Badge>
       </div>
       <WeightChart rubric={rubric} />
-      {!batch.published && (
+      {!batch.published && !canEdit && (
+        <Notice>
+          Only administrators can edit and publish criteria. You can read the
+          draft here.
+        </Notice>
+      )}
+      {editable && (
         <Notice>
           Criteria suggestions are editable examples, not AI output. Employer
           approval is required before publication.
         </Notice>
       )}
-      {!batch.published && (
+      {editable && (
         <div className="my-4">
           <Button
             variant="outline"
@@ -103,10 +112,7 @@ export function Criteria({
         </div>
       )}
       <Panel>
-        <fieldset
-          disabled={batch.published || busy}
-          className="criteria-fieldset"
-        >
+        <fieldset disabled={!editable || busy} className="criteria-fieldset">
           {rubric.map((c, i) => (
             <div className="criterion" key={c.id}>
               <FieldGroup>
@@ -181,7 +187,7 @@ export function Criteria({
                   </div>
                 </details>
               </FieldGroup>
-              {!batch.published && (
+              {editable && (
                 <div className="actions mt-3">
                   <Button
                     variant="ghost"
@@ -211,7 +217,7 @@ export function Criteria({
             </div>
           ))}
         </fieldset>
-        {!batch.published && (
+        {editable && (
           <div className="panel-footer actions">
             <Button
               variant="outline"
@@ -252,12 +258,18 @@ export function Criteria({
         <p>
           {batch.published
             ? "Published criteria are frozen for this batch."
-            : dirty
-              ? "Unsaved changes. Save before leaving this step."
-              : "Draft saved. Publication requires exactly 100 points."}
+            : !canEdit
+              ? "Waiting for an administrator to publish these criteria."
+              : dirty
+                ? "Unsaved changes. Save the draft before publishing or leaving this step."
+                : total !== 100
+                  ? `Publishing needs exactly 100 points. ${total < 100 ? `${100 - total} left to allocate.` : `${total - 100} over.`}`
+                  : !rubric.length
+                    ? "Add at least one criterion before publishing."
+                    : "Ready to publish. Publishing freezes these criteria for this batch."}
         </p>
         <div className="actions">
-          {!batch.published ? (
+          {editable ? (
             <>
               <Button
                 variant="outline"
@@ -294,12 +306,12 @@ export function Criteria({
                 <ArrowRight data-icon="inline-end" />
               </Button>
             </>
-          ) : (
+          ) : batch.published ? (
             <Button onClick={onNext}>
               Continue to Add CVs
               <ArrowRight data-icon="inline-end" />
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
     </>

@@ -32,7 +32,9 @@ export function Shortlist({
   onReveal,
   onNew,
   onDirty,
+  canStartNext,
 }: {
+  canStartNext: boolean;
   vacancy: PublicVacancy;
   batch: PublicBatch;
   send: Send;
@@ -239,10 +241,12 @@ export function Shortlist({
                   Export review CSV
                 </a>
               </Button>
-              <Button onClick={() => setNextDialog(true)}>
-                Start next batch
-                <Plus data-icon="inline-end" />
-              </Button>
+              {canStartNext && (
+                <Button onClick={() => setNextDialog(true)}>
+                  Start next batch
+                  <Plus data-icon="inline-end" />
+                </Button>
+              )}
             </>
           ) : (
             <>

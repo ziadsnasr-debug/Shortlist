@@ -1,11 +1,12 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect } from "@playwright/test";
+const criteria = "/vacancies/customer-success/first-batch/criteria";
 test("complete synthetic batch, tie gate, immutable export", async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/");
+  await page.goto(criteria);
   await expect(
     page.getByRole("heading", {
       name: "Customer success manager",
@@ -117,10 +118,7 @@ test("complete synthetic batch, tie gate, immutable export", async ({
     page.getByRole("heading", { name: "Finalised shortlist", exact: true }),
   ).toBeVisible();
   await page.reload();
-  await page
-    .getByRole("button", { name: /^.*Shortlist/ })
-    .first()
-    .click();
+  await expect(page).toHaveURL(/\/shortlist$/);
   await expect(
     page.getByRole("heading", { name: "Finalised shortlist", exact: true }),
   ).toBeVisible();
@@ -150,7 +148,7 @@ test("complete synthetic batch, tie gate, immutable export", async ({
 test("server rejects stale saves and cross-origin mutations", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto(criteria);
   await expect(
     page.getByRole("heading", { name: "Set the criteria" }),
   ).toBeVisible();
@@ -191,7 +189,7 @@ test("server rejects stale saves and cross-origin mutations", async ({
 test("mobile and 200% equivalent viewport fit", async ({ page }) => {
   for (const width of [390, 640]) {
     await page.setViewportSize({ width, height: 850 });
-    await page.goto("/");
+    await page.goto(criteria);
     await expect(
       page.getByRole("heading", { name: "Set the criteria" }),
     ).toBeVisible();
@@ -213,18 +211,18 @@ test("mobile and 200% equivalent viewport fit", async ({ page }) => {
 });
 
 test("accessible criteria and keyboard dialog", async ({ page }) => {
-  await page.goto("/");
+  await page.goto(criteria);
   await expect(
     page.getByRole("heading", { name: "Set the criteria" }),
   ).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-  await page
-    .getByRole("button", { name: "New vacancy", exact: true })
-    .first()
-    .click();
+  const trigger = page.getByRole("button", { name: /Recruiter workspace/ });
+  await trigger.click();
+  await page.getByRole("menuitem", { name: "How it works" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(trigger).toBeFocused();
 });
 
 test("hostile criteria text stays inert through review and no original is served inline", async ({
@@ -234,7 +232,7 @@ test("hostile criteria text stays inert through review and no original is served
   page.on("request", (r) => {
     if (!r.url().startsWith("http://127.0.0.1:3217")) calls.push(r.url());
   });
-  await page.goto("/");
+  await page.goto(criteria);
   await expect(
     page.getByRole("heading", { name: "Set the criteria" }),
   ).toBeVisible();

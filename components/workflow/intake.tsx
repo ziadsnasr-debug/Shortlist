@@ -25,7 +25,9 @@ export function Intake({
   onRefresh,
   version,
   uploads,
+  canDispose,
 }: {
+  canDispose: boolean;
   vacancy: PublicVacancy;
   batch: PublicBatch;
   send: Send;
@@ -109,7 +111,7 @@ export function Intake({
                         ? "Processing"
                         : "Needs readable copy or attention"}
               </Badge>
-              {!batch.closed && a.state !== "disposed" && (
+              {canDispose && !batch.closed && a.state !== "disposed" && (
                 <Button
                   variant="outline"
                   size="sm"

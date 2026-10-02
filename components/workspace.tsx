@@ -1,54 +1,86 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
-import {
-  Check,
-  Plus,
-  BriefcaseBusiness,
-  CircleHelp,
-  Settings2,
-  ArrowUpRight,
-} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { EyeOff, Eye, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
-import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { StatusChip } from "@/components/ui/status-chip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Administration } from "./administration";
 import { BatchProgress } from "./workspace-insights";
 import { Notice, Panel } from "./workflow/common";
-import {
-  steps,
-  type PublicVacancy,
-  type State,
-  type Send,
-} from "./workflow/types";
+import { steps, type State, type Send } from "./workflow/types";
 import { Criteria } from "./workflow/criteria";
 import { Intake } from "./workflow/intake";
 import { Review } from "./workflow/review";
 import { Shortlist } from "./workflow/shortlist";
+import { NavLink, type Navigate } from "./workflow/nav-link";
+import { defaultStep, parsePath, pathFor } from "./workflow/routes";
+import { Stepper } from "./workflow/stepper";
+import { Sidebar } from "./workflow/sidebar";
+import { VacanciesHome } from "./workflow/home";
+import { NewVacancy } from "./workflow/new-vacancy";
+
+const leaveMessage = "Save your draft before leaving this step.";
+
 export function WorkspaceApp() {
-  const [admin, setAdmin] = useState(false);
+  const pathname = usePathname();
+  // The path is the source of truth for location. It only diverges from the
+  // browser's pathname while a back/forward move is refused for unsaved work.
+  const [path, setPath] = useState(pathname);
   const [unsaved, setUnsaved] = useState(false);
+  const unsavedRef = useRef(false);
   const [state, setState] = useState<State | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [step, setStep] = useState(0),
-    [vacancyId, setVacancyId] = useState("customer-success"),
-    [batchId, setBatchId] = useState("first-batch"),
-    [home, setHome] = useState(false),
-    [dialog, setDialog] = useState(false),
     [help, setHelp] = useState(false),
     [reveal, setReveal] = useState(false);
+  const firstRender = useRef(true);
+  useEffect(() => {
+    unsavedRef.current = unsaved;
+  }, [unsaved]);
+
+  const navigate: Navigate = useCallback(
+    (to, opts) => {
+      if (to === path) return true;
+      if (unsavedRef.current && !opts?.force) {
+        toast.info(leaveMessage);
+        return false;
+      }
+      window.history[opts?.replace ? "replaceState" : "pushState"](
+        null,
+        "",
+        to,
+      );
+      setPath(to);
+      return true;
+    },
+    [path],
+  );
+
+  // Browser back/forward: follow it, unless a draft would be lost.
+  useEffect(() => {
+    if (pathname === path) return;
+    if (unsavedRef.current) {
+      window.history.pushState(null, "", path);
+      toast.info(leaveMessage);
+    } else setPath(pathname);
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const load = useCallback(async (revealNames = false) => {
     try {
       const response = await fetch(`/api/workspace?reveal=${revealNames}`, {
@@ -68,10 +100,59 @@ export function WorkspaceApp() {
   const refresh = useCallback(() => {
     void load();
   }, [load]);
+
+  const route = parsePath(path);
+  const isAdmin = state?.role === "administrator";
   const vacancy =
-    state?.vacancies.find((v) => v.id === vacancyId) ?? state?.vacancies[0];
+    route.view === "batch"
+      ? state?.vacancies.find((v) => v.id === route.vacancyId)
+      : undefined;
   const batch =
-    vacancy?.batches.find((b) => b.id === batchId) ?? vacancy?.batches.at(-1);
+    route.view === "batch"
+      ? vacancy?.batches.find((b) => b.id === route.batchId)
+      : undefined;
+  const batchKey =
+    route.view === "batch" ? `${route.vacancyId}/${route.batchId}` : "";
+  const stepIndex = route.view === "batch" ? route.step : -1;
+
+  // "/" is the vacancy list; give it its canonical address.
+  useEffect(() => {
+    if (path === "/") {
+      window.history.replaceState(null, "", "/vacancies");
+      setPath("/vacancies");
+    }
+  }, [path]);
+
+  // Names are revealed per batch and hidden again whenever the batch changes.
+  useEffect(() => {
+    setReveal(false);
+  }, [batchKey]);
+
+  // Each move lands on the page heading for keyboard and screen-reader users.
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    window.scrollTo({ top: 0 });
+    requestAnimationFrame(() =>
+      document.getElementById("page-title")?.focus({ preventScroll: true }),
+    );
+  }, [path]);
+
+  const vacancyTitle = vacancy?.title;
+  useEffect(() => {
+    const where =
+      route.view === "batch" && vacancyTitle
+        ? `${vacancyTitle} · ${steps[stepIndex]}`
+        : route.view === "new"
+          ? "New vacancy"
+          : route.view === "admin"
+            ? "Administration"
+            : "Vacancies";
+    document.title = `${where} · Shortlist`;
+  }, [route.view, stepIndex, vacancyTitle]);
+
   const send: Send = async (action, version) => {
     if (!state || busy) return null;
     setBusy(true);
@@ -94,97 +175,251 @@ export function WorkspaceApp() {
       setBusy(false);
     }
   };
-  function open(v: PublicVacancy) {
-    if (unsaved) {
-      toast.info("Save your draft before leaving this step.");
-      return;
-    }
-    const b = v.batches.at(-1)!;
-    setVacancyId(v.id);
-    setBatchId(b.id);
-    setAdmin(false);
-    setHome(false);
-    setReveal(false);
-    setStep(b.snapshot ? 3 : b.closed ? 2 : b.published ? 1 : 0);
+
+  const stepPath = (step: number, candidate?: number) =>
+    route.view === "batch"
+      ? pathFor({ ...route, step, candidate })
+      : pathFor({ view: "home" });
+
+  let page: React.ReactNode;
+  if (error)
+    page = (
+      <Panel>
+        <div className="panel-body">
+          <h1 id="page-title" tabIndex={-1}>
+            Workspace unavailable
+          </h1>
+          <p role="alert">{error}</p>
+          <div className="actions mt-5">
+            <Button onClick={() => void load()}>Try again</Button>
+            <Button variant="outline" asChild>
+              <Link href="/login">Invited account sign in</Link>
+            </Button>
+          </div>
+        </div>
+      </Panel>
+    );
+  else if (!state)
+    page = (
+      <div className="workspace-loading" role="status">
+        <h1 id="page-title" tabIndex={-1}>
+          Preparing your workspace
+        </h1>
+        <p>Your criteria, applications and review progress.</p>
+        <div className="loading-line" />
+        <div className="loading-line" />
+      </div>
+    );
+  else if (route.view === "home")
+    page = (
+      <VacanciesHome
+        vacancies={state.vacancies}
+        isAdmin={isAdmin}
+        navigate={navigate}
+      />
+    );
+  else if (route.view === "new")
+    page = (
+      <NewVacancy
+        isAdmin={isAdmin}
+        busy={busy}
+        send={send}
+        navigate={navigate}
+      />
+    );
+  else if (route.view === "admin")
+    page = isAdmin ? (
+      <Administration />
+    ) : (
+      <>
+        <h1 id="page-title" tabIndex={-1}>
+          Administration
+        </h1>
+        <Notice>
+          Administration is available to workspace administrators only.
+        </Notice>
+      </>
+    );
+  else if (route.view === "missing" || !vacancy || !batch)
+    page = (
+      <section className="panel empty">
+        <h1 id="page-title" tabIndex={-1}>
+          This page does not exist
+        </h1>
+        <p>
+          The vacancy or batch may have been removed, or the address is
+          incomplete.
+        </p>
+        <Button asChild>
+          <NavLink href={pathFor({ view: "home" })} navigate={navigate}>
+            Go to vacancies
+          </NavLink>
+        </Button>
+      </section>
+    );
+  else {
+    const step = route.step;
+    page = (
+      <>
+        <nav className="breadcrumb" aria-label="Breadcrumb">
+          <NavLink href={pathFor({ view: "home" })} navigate={navigate}>
+            Vacancies
+          </NavLink>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page">{vacancy.title}</span>
+        </nav>
+        <header className="pagehead">
+          <div>
+            <h1 id="page-title" tabIndex={-1}>
+              {vacancy.title}
+            </h1>
+            <p>
+              {[vacancy.team, batch.label].filter(Boolean).join(" · ")} ·{" "}
+              {batch.snapshot
+                ? "Finalised batch"
+                : batch.closed
+                  ? "Intake closed"
+                  : "Open for CVs"}
+            </p>
+          </div>
+          <div className="actions">
+            <StatusChip
+              tone={reveal ? "warning" : "neutral"}
+              icon={reveal ? <Eye /> : <EyeOff />}
+            >
+              {reveal ? "Names revealed" : "Names hidden during review"}
+            </StatusChip>
+            {vacancy.batches.length > 1 && (
+              <Select
+                value={batch.id}
+                disabled={unsaved}
+                onValueChange={(id) => {
+                  const b = vacancy.batches.find((x) => x.id === id)!;
+                  navigate(
+                    pathFor({
+                      view: "batch",
+                      vacancyId: vacancy.id,
+                      batchId: b.id,
+                      step: defaultStep(b),
+                    }),
+                  );
+                }}
+              >
+                <SelectTrigger aria-label="Choose batch" className="w-56">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {vacancy.batches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.label}
+                      {b.snapshot ? " · Finalised" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        </header>
+        <Stepper
+          vacancyId={vacancy.id}
+          batch={batch}
+          step={step}
+          navigate={navigate}
+        />
+        {step > 0 && <BatchProgress applications={batch.applications} />}
+        <div className="workflow-content" key={`${batch.id}-${step}`}>
+          {step === 0 && (
+            <Criteria
+              ai={state.capabilities?.ai ?? false}
+              key={`${batch.id}-${batch.published}`}
+              vacancy={vacancy}
+              batch={batch}
+              send={send}
+              busy={busy}
+              canEdit={isAdmin}
+              onDirty={setUnsaved}
+              onNext={() => navigate(stepPath(1))}
+            />
+          )}
+          {step === 1 && (
+            <Intake
+              vacancy={vacancy}
+              batch={batch}
+              send={send}
+              busy={busy}
+              canDispose={isAdmin}
+              onNext={() => navigate(stepPath(2))}
+              onRefresh={refresh}
+              version={state.version}
+              uploads={state.capabilities?.uploads ?? false}
+            />
+          )}
+          {step === 2 && (
+            <Review
+              key={batch.id}
+              vacancy={vacancy}
+              batch={batch}
+              send={send}
+              busy={busy}
+              onDirty={setUnsaved}
+              onNext={() => navigate(stepPath(3), { force: true })}
+              candidate={route.candidate}
+              onCandidate={(n) => navigate(stepPath(2, n), { force: true })}
+            />
+          )}
+          {step === 3 && (
+            <Shortlist
+              key={`${batch.id}-${!!batch.snapshot}`}
+              vacancy={vacancy}
+              batch={batch}
+              send={send}
+              busy={busy}
+              canStartNext={isAdmin}
+              onDirty={setUnsaved}
+              reveal={reveal}
+              onReveal={() => {
+                setReveal(!reveal);
+                void load(!reveal);
+              }}
+              onNew={(b) =>
+                navigate(
+                  pathFor({
+                    view: "batch",
+                    vacancyId: vacancy.id,
+                    batchId: b.id,
+                    step: 0,
+                  }),
+                )
+              }
+            />
+          )}
+        </div>
+      </>
+    );
   }
+
   return (
     <div className="shell">
       <a className="skip-link" href="#main-content">
         Skip to workspace
       </a>
-      <aside className="sidebar">
-        <Logo className="brand" />
-        <div className="workspace-label">
-          <span className="workspace-avatar">S</span>
-          <div>
-            Recruiter workspace<small>Evidence first. You decide.</small>
-          </div>
-        </div>
-        <nav aria-label="Main navigation">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              if (unsaved) {
-                toast.info("Save your draft before leaving this step.");
-                return;
-              }
-              setAdmin(false);
-              setHome(true);
-            }}
-          >
-            <BriefcaseBusiness aria-hidden="true" /> Vacancies
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              if (unsaved) {
-                toast.info("Save your draft before leaving this step.");
-                return;
-              }
-              setDialog(true);
-            }}
-          >
-            <Plus data-icon="inline-start" />
-            New vacancy
-          </Button>
-        </nav>
-        <div className="side-roles">
-          <small>YOUR VACANCIES</small>
-          {state?.vacancies.map((v) => (
-            <button
-              key={v.id}
-              className={v.id === vacancy?.id && !home ? "current" : ""}
-              onClick={() => open(v)}
-            >
-              {v.title}
-            </button>
-          ))}
-        </div>
-        <div className="sidefoot">
-          <span className="eyebrow">YOUR WORKSPACE</span>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              if (unsaved) {
-                toast.info("Save your draft before leaving this step.");
-                return;
-              }
-              setAdmin(true);
-            }}
-          >
-            <Settings2 aria-hidden="true" />
-            Administration
-          </Button>
-          <Button variant="ghost" onClick={() => setHelp(true)}>
-            <CircleHelp aria-hidden="true" /> How it works
-          </Button>
-        </div>
-      </aside>
+      <Sidebar
+        vacancies={state?.vacancies ?? []}
+        route={route}
+        isAdmin={isAdmin}
+        role={state?.role ?? "reviewer"}
+        canSignOut={state?.mode === "Supabase synthetic"}
+        navigate={navigate}
+        onHelp={() => setHelp(true)}
+      />
       <main id="main-content" tabIndex={-1}>
         <div className="demo-banner">
-          <span>
-            <strong>Synthetic POC.</strong> Fictional CVs only. Real applicant
-            data remains disabled.
+          <span className="demo-chip">
+            <FlaskConical aria-hidden="true" />
+            <span>
+              <strong>Synthetic proof of concept.</strong> Fictional CVs only.
+              Real applicant data is disabled.
+            </span>
           </span>
           <span className="save-status" role="status">
             {busy
@@ -192,308 +427,12 @@ export function WorkspaceApp() {
               : unsaved
                 ? "Unsaved changes"
                 : state
-                  ? "Workspace ready"
+                  ? "All changes saved"
                   : "Connecting…"}
           </span>
         </div>
-        <div className="page">
-          {error ? (
-            <Panel>
-              <h1>Workspace unavailable</h1>
-              <p role="alert">{error}</p>
-              <div className="actions">
-                <Button onClick={() => void load()}>Try again</Button>
-                <Button variant="outline" asChild>
-                  <a href="/login">Invited account sign in</a>
-                </Button>
-              </div>
-            </Panel>
-          ) : !state || !vacancy || !batch ? (
-            <div className="workspace-loading" role="status">
-              <span className="eyebrow">SHORTLIST</span>
-              <h1>Preparing your workspace</h1>
-              <p>Your criteria, applications and review progress.</p>
-              <div className="loading-line" />
-              <div className="loading-line" />
-              <span className="sr-only">Loading your workspace…</span>
-            </div>
-          ) : admin ? (
-            <>
-              <Button variant="outline" onClick={() => setAdmin(false)}>
-                Back to workspace
-              </Button>
-              <Administration />
-            </>
-          ) : home ? (
-            <>
-              <Button
-                className="mobile-admin"
-                variant="outline"
-                onClick={() => setAdmin(true)}
-              >
-                Administration
-              </Button>
-              <header className="pagehead">
-                <div>
-                  <span className="eyebrow">WORKSPACE OVERVIEW</span>
-                  <h1>Your vacancies</h1>
-                  <p>Set criteria. Check evidence. Choose your shortlist.</p>
-                </div>
-                <Button
-                  onClick={() => {
-                    if (unsaved) {
-                      toast.info("Save your draft before leaving this step.");
-                      return;
-                    }
-                    setDialog(true);
-                  }}
-                >
-                  New vacancy
-                  <Plus data-icon="inline-end" />
-                </Button>
-              </header>
-              <BatchProgress
-                applications={state.vacancies.flatMap(
-                  (v) => v.batches.at(-1)?.applications ?? [],
-                )}
-              />
-              <Panel>
-                {state.vacancies.map((v) => (
-                  <div className="vacancy-row" key={v.id}>
-                    <div>
-                      <h2>{v.title}</h2>
-                      <p>
-                        {v.team} · {v.batches.at(-1)!.label}
-                      </p>
-                    </div>
-                    <Badge variant="secondary">
-                      {
-                        v.batches
-                          .at(-1)!
-                          .applications.filter((a) => a.confirmed).length
-                      }{" "}
-                      reviewed
-                    </Badge>
-                    <Button variant="outline" onClick={() => open(v)}>
-                      Continue
-                      <ArrowUpRight data-icon="inline-end" />
-                    </Button>
-                  </div>
-                ))}
-              </Panel>
-            </>
-          ) : (
-            <>
-              <div className="breadcrumb">
-                <button
-                  onClick={() => {
-                    if (unsaved) {
-                      toast.info("Save your draft before leaving this step.");
-                      return;
-                    }
-                    setHome(true);
-                  }}
-                >
-                  Vacancies
-                </button>
-                <span>›</span>
-                <span>{vacancy.team}</span>
-              </div>
-              <header className="pagehead">
-                <div>
-                  <span className="eyebrow">HIRING WORKSPACE</span>
-                  <h1>{vacancy.title}</h1>
-                  <p>
-                    {batch.label} ·{" "}
-                    {batch.snapshot
-                      ? "Finalised batch"
-                      : batch.closed
-                        ? "Intake closed"
-                        : "Open for CVs"}
-                  </p>
-                </div>
-                <div className="actions">
-                  <Badge variant="outline">
-                    {reveal ? "Names revealed" : "Names hidden during review"}
-                  </Badge>
-                  {vacancy.batches.length > 1 && (
-                    <select
-                      aria-label="Choose batch"
-                      disabled={unsaved}
-                      value={batch.id}
-                      onChange={(e) => {
-                        setBatchId(e.target.value);
-                        setStep(0);
-                        setReveal(false);
-                      }}
-                    >
-                      {vacancy.batches.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.label}
-                          {b.snapshot ? " · Finalised" : ""}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              </header>
-              <nav className="steps" aria-label="Vacancy workflow">
-                {steps.map((name, i) => {
-                  const complete = [
-                    batch.published,
-                    batch.closed,
-                    batch.applications.length > 0 &&
-                      batch.applications.every(
-                        (a) => a.confirmed || a.state === "disposed",
-                      ),
-                    !!batch.snapshot,
-                  ][i];
-                  return (
-                    <button
-                      key={name}
-                      aria-current={step === i ? "step" : undefined}
-                      onClick={() => {
-                        if (unsaved) {
-                          toast.info(
-                            "Save your draft before leaving this step.",
-                          );
-                          return;
-                        }
-                        setStep(i);
-                      }}
-                      className={step === i ? "active" : ""}
-                    >
-                      <span className="step-number">
-                        {complete ? <Check aria-hidden="true" /> : i + 1}
-                      </span>
-                      <span>
-                        <strong>{name}</strong>
-                        <small>
-                          {
-                            [
-                              batch.published ? "Published" : "100 points",
-                              `${batch.applications.length} documents`,
-                              `${batch.applications.filter((a) => a.confirmed).length} reviewed`,
-                              batch.snapshot ? "Finalised" : "Up to 3",
-                            ][i]
-                          }
-                        </small>
-                      </span>
-                    </button>
-                  );
-                })}
-              </nav>
-              {step > 0 && <BatchProgress applications={batch.applications} />}
-              <div className="workflow-content" key={`${batch.id}-${step}`}>
-                {step === 0 && (
-                  <Criteria
-                    ai={state.capabilities?.ai ?? false}
-                    key={`${batch.id}-${batch.published}`}
-                    vacancy={vacancy}
-                    batch={batch}
-                    send={send}
-                    busy={busy}
-                    onDirty={setUnsaved}
-                    onNext={() => setStep(1)}
-                  />
-                )}
-                {step === 1 && (
-                  <Intake
-                    vacancy={vacancy}
-                    batch={batch}
-                    send={send}
-                    busy={busy}
-                    onNext={() => setStep(2)}
-                    onRefresh={refresh}
-                    version={state.version}
-                    uploads={state.capabilities?.uploads ?? false}
-                  />
-                )}
-                {step === 2 && (
-                  <Review
-                    key={batch.id}
-                    vacancy={vacancy}
-                    batch={batch}
-                    send={send}
-                    busy={busy}
-                    onDirty={setUnsaved}
-                    onNext={() => setStep(3)}
-                  />
-                )}
-                {step === 3 && (
-                  <Shortlist
-                    key={`${batch.id}-${!!batch.snapshot}`}
-                    vacancy={vacancy}
-                    batch={batch}
-                    send={send}
-                    busy={busy}
-                    onDirty={setUnsaved}
-                    reveal={reveal}
-                    onReveal={() => {
-                      setReveal(!reveal);
-                      void load(!reveal);
-                    }}
-                    onNew={(b) => {
-                      setBatchId(b.id);
-                      setStep(0);
-                    }}
-                  />
-                )}
-              </div>
-            </>
-          )}
-        </div>
+        <div className="page">{page}</div>
       </main>
-      <Dialog open={dialog} onOpenChange={setDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create a vacancy</DialogTitle>
-            <DialogDescription>
-              Define role requirements. Use synthetic descriptions only during
-              this POC.
-            </DialogDescription>
-          </DialogHeader>
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const f = new FormData(e.currentTarget);
-              const next = await send({
-                type: "create",
-                title: String(f.get("title")),
-                team: String(f.get("team")),
-                description: String(f.get("description")),
-              });
-              if (next) {
-                open(next.vacancies.at(-1)!);
-                setDialog(false);
-              }
-            }}
-          >
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="title">Job title</FieldLabel>
-                <Input id="title" name="title" required maxLength={100} />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="team">Team</FieldLabel>
-                <Input id="team" name="team" maxLength={80} />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="description">Job description</FieldLabel>
-                <Textarea
-                  id="description"
-                  name="description"
-                  required
-                  maxLength={6000}
-                />
-              </Field>
-            </FieldGroup>
-            <DialogFooter className="mt-5">
-              <Button disabled={busy}>Create vacancy</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
       <Dialog open={help} onOpenChange={setHelp}>
         <DialogContent>
           <DialogHeader>

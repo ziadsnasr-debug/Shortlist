@@ -15,6 +15,8 @@ export function Review({
   busy,
   onNext,
   onDirty,
+  candidate,
+  onCandidate,
 }: {
   vacancy: PublicVacancy;
   batch: PublicBatch;
@@ -22,9 +24,21 @@ export function Review({
   busy: boolean;
   onNext: () => void;
   onDirty: (v: boolean) => void;
+  candidate?: number;
+  onCandidate: (n: number) => void;
 }) {
-  const [index, setIndex] = useState(0);
   const apps = batch.applications.filter((a) => a.state !== "disposed");
+  // Label numbers follow arrival order, so they survive dispositions.
+  const number = (a: PublicApp) => batch.applications.indexOf(a) + 1;
+  const requested = apps.findIndex((a) => number(a) === candidate);
+  const index =
+    requested >= 0
+      ? requested
+      : Math.max(
+          0,
+          apps.findIndex((a) => !a.confirmed),
+        );
+  const setIndex = (i: number) => onCandidate(number(apps[i]));
   const app = apps[index];
   if (!batch.closed)
     return (
