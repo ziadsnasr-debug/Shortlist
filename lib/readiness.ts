@@ -1,3 +1,4 @@
+import { localBypassActor } from "./local-access";
 export type ReadinessStatus = "pass" | "fail" | "not_applicable";
 export type ReadinessCheck = {
   name: string;
@@ -36,7 +37,11 @@ function allowanceValid(value: string | undefined) {
   if (!configured(value)) return true; // Application default is 240.
   if (!/^\d+$/.test(value!.trim())) return false;
   const amount = Number(value);
-  return Number.isSafeInteger(amount) && amount >= 1 && amount <= MAX_MONTHLY_ALLOWANCE;
+  return (
+    Number.isSafeInteger(amount) &&
+    amount >= 1 &&
+    amount <= MAX_MONTHLY_ALLOWANCE
+  );
 }
 
 /**
@@ -51,13 +56,24 @@ export function readiness(
   const localMode = mode === "local-synthetic";
   const hostedMode = mode === "supabase-synthetic";
   const localEnvironment = appEnvironment === "local";
-  const hostedEnvironment = appEnvironment === "staging" || appEnvironment === "production";
+  const hostedEnvironment =
+    appEnvironment === "staging" || appEnvironment === "production";
   const appUrl = parsedUrl(env.APP_URL);
   const supabaseUrl = parsedUrl(env.NEXT_PUBLIC_SUPABASE_URL);
   const aiEnabled = env.AI_ENABLED === "true";
   const allowanceOk = allowanceValid(env.MONTHLY_PROCESSING_ALLOWANCE);
+  let bypassValid = true;
+  try {
+    localBypassActor(env);
+  } catch {
+    bypassValid = false;
+  }
 
   const checks: ReadinessCheck[] = [
+    {
+      name: "local_authentication_configuration",
+      status: bypassValid ? "pass" : "fail",
+    },
     {
       name: "app_environment",
       status: VALID_ENVIRONMENTS.has(appEnvironment ?? "") ? "pass" : "fail",
@@ -92,8 +108,10 @@ export function readiness(
         : hostedMode &&
             !!supabaseUrl &&
             (localEnvironment
-              ? ["http:", "https:"].includes(supabaseUrl.protocol) && isLoopback(supabaseUrl)
-              : supabaseUrl.protocol === "https:" && !isLoopback(supabaseUrl)) &&
+              ? ["http:", "https:"].includes(supabaseUrl.protocol) &&
+                isLoopback(supabaseUrl)
+              : supabaseUrl.protocol === "https:" &&
+                !isLoopback(supabaseUrl)) &&
             configured(env.NEXT_PUBLIC_SUPABASE_ANON_KEY) &&
             configured(env.SUPABASE_SERVICE_ROLE_KEY) &&
             configured(env.WORKSPACE_ID)
@@ -102,11 +120,12 @@ export function readiness(
     },
     {
       name: "hosted_runtime_mode",
-      status: env.VERCEL && (!hostedMode || localEnvironment)
-        ? "fail"
-        : localMode && env.VERCEL
+      status:
+        env.VERCEL && (!hostedMode || localEnvironment)
           ? "fail"
-          : "pass",
+          : localMode && env.VERCEL
+            ? "fail"
+            : "pass",
     },
     {
       name: "direct_ai_configuration",
@@ -130,13 +149,14 @@ export function readiness(
     },
     {
       name: "cron_configuration",
-      status: localEnvironment || localMode
-        ? "not_applicable"
-        : hostedMode &&
-            configured(env.CRON_SECRET) &&
-            env.CRON_SECRET!.length >= 32
-          ? "pass"
-          : "fail",
+      status:
+        localEnvironment || localMode
+          ? "not_applicable"
+          : hostedMode &&
+              configured(env.CRON_SECRET) &&
+              env.CRON_SECRET!.length >= 32
+            ? "pass"
+            : "fail",
     },
     {
       name: "monthly_allowance",
@@ -149,10 +169,9 @@ export function readiness(
   ];
 
   return {
-    status:
-      checks.every((check) => check.status !== "fail")
-        ? "configuration_ready"
-        : "blocked",
+    status: checks.every((check) => check.status !== "fail")
+      ? "configuration_ready"
+      : "blocked",
     checks,
   };
 }
