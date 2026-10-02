@@ -972,57 +972,12 @@ h3,
 .review-footer .actions {
   justify-content: flex-end;
 }
-.insight-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
-  gap: 32px;
-  padding: 24px 28px;
-  margin: 18px 0;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--card);
-}
-.insight-title strong {
-  display: block;
-  font-size: 20px;
-  font-weight: 600;
-  margin: 12px 0 5px;
-  letter-spacing: -0.02em;
-}
-.insight-title p {
-  font-size: 12px;
-}
-.weight-rows {
-  display: grid;
-  gap: 10px;
-  align-content: center;
-}
-.weight-row > div:first-child {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 12px;
-  margin-bottom: 5px;
-}
-.weight-row span {
-  overflow-wrap: anywhere;
-}
-.weight-row strong {
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-.weight-row small {
-  color: var(--muted-foreground);
-  font-weight: 400;
-}
-.bar-track,
 .score-track {
   height: 6px;
   border-radius: 4px;
   overflow: hidden;
   background: var(--muted);
 }
-.bar-fill,
 .score-track > span {
   display: block;
   height: 100%;
@@ -1031,12 +986,6 @@ h3,
   transform-origin: left;
   transform: scaleX(var(--bar-size));
   animation: bar-enter 240ms var(--ease-out);
-}
-.series-1 {
-  background: var(--primary);
-}
-.series-2 {
-  background: var(--primary);
 }
 .batch-progress {
   position: relative;
@@ -1269,7 +1218,6 @@ select:focus-visible {
   }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .insight-panel,
   .comparison-panel,
   .comparison-empty {
     animation: surface-enter 180ms var(--ease-out);
@@ -1294,10 +1242,6 @@ select:focus-visible {
   }
 }
 @media (max-width: 1080px) {
-  .insight-panel {
-    gap: 20px;
-    padding: 22px;
-  }
   .source-body {
     max-height: 380px;
   }
@@ -1343,14 +1287,6 @@ select:focus-visible {
   .demo-banner {
     padding: 12px 17px;
   }
-  .insight-panel {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 18px;
-    padding: 20px;
-  }
-  .insight-title strong {
-    font-size: 19px;
-  }
   .batch-progress {
     padding: 14px 16px 18px;
     gap: 10px;
@@ -1389,7 +1325,9 @@ select:focus-visible {
   select {
     font-size: 16px;
   }
-  button {
+  /* Switches and checkboxes keep their shape; their labels carry the
+     touch target instead. */
+  button:not([role="switch"], [role="checkbox"], [role="radio"]) {
     min-height: 44px;
   }
   .check-line {
@@ -1422,7 +1360,10 @@ select:focus-visible {
   visibility: hidden;
 }
 
-/* Shell: sidebar, account menu, mobile bar, stepper and vacancy list. */
+/* Shell: sidebar,
+account menu,
+mobile bar,
+stepper and vacancy list. */
 .side-nav a,
 .side-link,
 .side-roles a {
@@ -1725,7 +1666,9 @@ nav.steps {
   }
 }
 
-/* CV intake: upload zone, batch status, file rows and the reading glyph. */
+/* CV intake: upload zone,
+batch status,
+file rows and the reading glyph. */
 .upload {
   padding: 20px 24px;
   display: grid;
