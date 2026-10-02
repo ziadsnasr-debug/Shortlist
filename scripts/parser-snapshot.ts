@@ -32,7 +32,7 @@ try {
     "node",
     [
       "-e",
-      "process.exit(Object.keys(process.env).some(k=>/ANTHROPIC|SUPABASE|VERCEL_TOKEN|OIDC_TOKEN|CRON_SECRET|SHORTLIST_SECRET_CANARY/.test(k))?1:0)",
+      "process.exit(Object.keys(process.env).some(k=>/OPENAI|ANTHROPIC|SUPABASE|VERCEL_TOKEN|OIDC_TOKEN|CRON_SECRET|SHORTLIST_SECRET_CANARY/.test(k))?1:0)",
     ],
     { timeoutMs: 5000 },
   );

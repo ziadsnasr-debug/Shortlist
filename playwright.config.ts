@@ -9,6 +9,11 @@ export default defineConfig({
   },
   webServer: {
     command: "npm run start -- --port 3217",
+    env: {
+      PERSISTENCE_MODE: "local-synthetic",
+      APP_URL: "http://127.0.0.1:3217",
+      AI_ENABLED: "false",
+    },
     url: "http://127.0.0.1:3217",
     reuseExistingServer: false,
   },

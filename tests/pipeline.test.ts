@@ -18,8 +18,8 @@ afterEach(() => {
 });
 function enable() {
   process.env.AI_ENABLED = "true";
-  process.env.ANTHROPIC_API_KEY = "synthetic-placeholder";
-  process.env.AI_MODEL_ID = "claude-opus-5-5";
+  process.env.OPENAI_API_KEY = "synthetic-placeholder";
+  process.env.AI_MODEL_ID = "gpt-6-luna";
 }
 const app = () => samples(sampleRubric, 1)[0];
 it("performs exactly two fresh bounded calls with no tools, scores, other CVs or pass leakage", async () => {
@@ -44,6 +44,11 @@ it("performs exactly two fresh bounded calls with no tools, scores, other CVs or
   expect(first).not.toHaveProperty("tools");
   expect(first).not.toHaveProperty("messages");
   expect(first.maxRetries).toBe(0);
+  expect(first.providerOptions.openai).toEqual({
+    store: false,
+    reasoningEffort: "low",
+    strictJsonSchema: true,
+  });
   expect(first.experimental_telemetry.isEnabled).toBe(false);
   expect(first.prompt).not.toContain("Morgan Ellis");
   expect(result.assessments[sampleRubric[0].id].category).toBe("PARTIAL");
@@ -92,7 +97,7 @@ it("AI criteria cannot silently publish invalid weights", async () => {
 it("denied network, empty sandbox env and cleanup hold on malformed output", async () => {
   process.env.PARSER_SNAPSHOT_ID = "synthetic-snapshot";
   process.env.PARSER_BUNDLE_SHA256 = "a".repeat(64);
-  process.env.ANTHROPIC_API_KEY = "synthetic-placeholder";
+  process.env.OPENAI_API_KEY = "synthetic-placeholder";
   const stop = vi.fn(),
     write = vi.fn();
   mock.create.mockResolvedValue({
