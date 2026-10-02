@@ -366,7 +366,7 @@ export function WorkspaceApp() {
               onDirty={setUnsaved}
               onNext={() => navigate(stepPath(3), { force: true })}
               candidate={route.candidate}
-              onCandidate={(n) => navigate(stepPath(2, n), { force: true })}
+              onCandidate={(n, force) => navigate(stepPath(2, n), { force })}
             />
           )}
           {step === 3 && (
