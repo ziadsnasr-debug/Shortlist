@@ -3,6 +3,9 @@
 import { execFileSync, spawn } from "node:child_process";
 import { randomUUID, createHmac, randomBytes } from "node:crypto";
 import assert from "node:assert/strict";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { PDFDocument, StandardFonts } from "pdf-lib";
+import { hash } from "../lib/pipeline/contracts";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { seed, samples } from "../fixtures/synthetic/seed";
 import { applyAction, type Action, type Workspace } from "../lib/workflow";
@@ -38,6 +41,7 @@ function totp(secret: string) {
     .toString()
     .padStart(6, "0");
 }
+const invitedUsers: string[] = [];
 const users: {
   id: string;
   email: string;
@@ -48,6 +52,30 @@ const users: {
 }[] = [];
 let workspaceId = "",
   server: ReturnType<typeof spawn> | undefined;
+async function cleanupWorkspace(workspaceId: string) {
+  assert(/^[0-9a-f-]{36}$/.test(workspaceId));
+  execFileSync(
+    "docker",
+    [
+      "exec",
+      "supabase_db_shortlist-local",
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      "postgres",
+      "-c",
+      `delete from public.application_reviews where application_id in (select a.id from public.applications a join public.batches b on b.id=a.batch_id join public.vacancies v on v.id=b.vacancy_id where v.workspace_id='${workspaceId}'); delete from public.assessment_runs where application_id in (select a.id from public.applications a join public.batches b on b.id=a.batch_id join public.vacancies v on v.id=b.vacancy_id where v.workspace_id='${workspaceId}'); delete from public.source_blocks where document_id in (select id from public.documents where workspace_id='${workspaceId}'); delete from public.documents where workspace_id='${workspaceId}'; delete from public.applications where batch_id in (select b.id from public.batches b join public.vacancies v on v.id=b.vacancy_id where v.workspace_id='${workspaceId}'); delete from public.batches where vacancy_id in (select id from public.vacancies where workspace_id='${workspaceId}'); delete from public.vacancies where workspace_id='${workspaceId}'; delete from public.processing_allowances where workspace_id='${workspaceId}'; delete from public.deletion_ledger where workspace_id='${workspaceId}'; delete from public.audit_events where workspace_id='${workspaceId}';`,
+    ],
+    { stdio: "ignore" },
+  );
+  await db
+    .from("synthetic_workspaces")
+    .delete()
+    .eq("workspace_id", workspaceId);
+  await db.from("workspace_members").delete().eq("workspace_id", workspaceId);
+  await db.from("workspaces").delete().eq("id", workspaceId);
+}
 try {
   for (let i = 0; i < 3; i++) {
     const email = `shortlist-${randomUUID()}@example.invalid`,
@@ -92,17 +120,13 @@ try {
   workspaceId = w.id;
   assert(
     !(
-      await db
-        .from("workspace_members")
-        .insert(
-          users
-            .slice(0, 2)
-            .map((u, i) => ({
-              workspace_id: workspaceId,
-              user_id: u.id,
-              role: i ? "reviewer" : "administrator",
-            })),
-        )
+      await db.from("workspace_members").insert(
+        users.slice(0, 2).map((u, i) => ({
+          workspace_id: workspaceId,
+          user_id: u.id,
+          role: i ? "reviewer" : "administrator",
+        })),
+      )
     ).error,
   );
   assert(
@@ -182,6 +206,7 @@ try {
         NEXT_PUBLIC_SUPABASE_ANON_KEY: settings.ANON_KEY,
         SUPABASE_SERVICE_ROLE_KEY: settings.SERVICE_ROLE_KEY,
         WORKSPACE_ID: workspaceId,
+        APP_URL: "http://127.0.0.1:3219",
       },
       stdio: "ignore",
     },
@@ -255,6 +280,65 @@ try {
       body: JSON.stringify({ version, action }),
     });
   }
+  async function adminAction(cookie: () => string, body: unknown) {
+    return fetch(origin + "/api/administration", {
+      method: "POST",
+      headers: { origin, "Content-Type": "application/json", Cookie: cookie() },
+      body: JSON.stringify(body),
+    });
+  }
+  assert(
+    (
+      await fetch(origin + "/api/administration", {
+        headers: { Cookie: reviewerCookie() },
+      })
+    ).status === 403,
+    "Reviewer cannot inspect admin records.",
+  );
+  assert(
+    (
+      await adminAction(reviewerCookie, {
+        type: "settings",
+        paused: true,
+        retentionDays: null,
+        incidentOwner: "Synthetic incident owner",
+      })
+    ).status === 403,
+  );
+  assert(
+    (
+      await adminAction(adminCookie, {
+        type: "settings",
+        paused: true,
+        retentionDays: 30,
+        incidentOwner: "Synthetic incident owner",
+      })
+    ).status === 200,
+  );
+  assert(
+    (
+      await adminAction(adminCookie, {
+        type: "settings",
+        paused: false,
+        retentionDays: null,
+        incidentOwner: "",
+      })
+    ).status === 200,
+  );
+  const invite = await adminAction(adminCookie, {
+    type: "invite",
+    email: `shortlist-invite-${randomUUID()}@example.invalid`,
+    role: "reviewer",
+  });
+  assert(invite.status === 200, "Local invitation request failed.");
+  const invited = (
+    await db
+      .from("workspace_members")
+      .select("user_id")
+      .eq("workspace_id", workspaceId)
+  ).data!.filter((m) => !users.some((u) => u.id === m.user_id));
+  assert(invited.length === 1, "Invitation creates active membership.");
+  invitedUsers.push(invited[0].user_id);
   const base = { vacancyId: "customer-success", batchId: "first-batch" };
   assert(
     (await post(reviewerCookie, 0, { ...base, type: "publish" })).status ===
@@ -386,8 +470,490 @@ try {
   );
   assert(
     (await db.from("audit_events").select("id").eq("workspace_id", workspaceId))
-      .data!.length === 2,
-    "Successful saves append safe audit events.",
+      .data!.length === 5,
+    "Successful saves and administration append safe audit events.",
+  );
+  // Exercise actual Stage 3 transactions; synthetic files only, no model/sandbox claim.
+  assert(
+    (
+      await post(adminCookie, current.version, {
+        ...base,
+        type: "next",
+        label: "Pipeline integration",
+      })
+    ).status === 200,
+  );
+  let live = await read(adminCookie);
+  const nextBatch = live.vacancies[0].batches.at(-1);
+  assert(
+    (
+      await post(adminCookie, live.version, {
+        vacancyId: base.vacancyId,
+        batchId: nextBatch.id,
+        type: "publish",
+      })
+    ).status === 200,
+  );
+  live = await read(adminCookie);
+  const pdf = await PDFDocument.create(),
+    font = await pdf.embedFont(StandardFonts.Helvetica);
+  pdf
+    .addPage()
+    .drawText("Fictional restoration fixture 1", { font, x: 30, y: 700 });
+  const originalBytes = Buffer.from(await pdf.save());
+  const documentId = randomUUID(),
+    appKey = "CV-" + randomUUID();
+  const reserveArgs = {
+    p_workspace: workspaceId,
+    p_actor: admin.id,
+    p_expected: live.version,
+    p_vacancy: base.vacancyId,
+    p_batch: nextBatch.id,
+    p_document: documentId,
+    p_application: appKey,
+    p_filename: "Fictional.pdf",
+    p_size: originalBytes.length,
+    p_type: "pdf",
+  };
+  assert(
+    (await reviewer.client.rpc("reserve_document", reserveArgs)).error,
+    "Browser cannot reserve via privileged RPC.",
+  );
+  const reserved = await db.rpc("reserve_document", reserveArgs);
+  assert(
+    !reserved.error && reserved.data,
+    "Reservation transaction failed: " +
+      reserved.error?.code +
+      " " +
+      reserved.error?.message,
+  );
+  assert(
+    (
+      await db.rpc("reserve_document", {
+        ...reserveArgs,
+        p_document: randomUUID(),
+        p_application: "CV-" + randomUUID(),
+      })
+    ).data === false,
+    "Stale reservation must conflict.",
+  );
+  const { data: scope, error: scopeError } = await db.storage
+    .from("cv-originals")
+    .createSignedUploadUrl(`${workspaceId}/${documentId}`, { upsert: false });
+  assert(!scopeError && scope);
+  assert(
+    (
+      await fetch(scope.signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "application/pdf" },
+        body: originalBytes,
+      })
+    ).ok,
+    "Scoped private upload failed.",
+  );
+  assert(
+    (
+      await outsider.client.storage
+        .from("cv-originals")
+        .createSignedUrl(`${workspaceId}/${documentId}`, 60)
+    ).error,
+    "Outsider cannot download original.",
+  );
+  const enqueue = await db.rpc("enqueue_document", {
+    p_workspace: workspaceId,
+    p_actor: admin.id,
+    p_document: documentId,
+    p_hash: hash(originalBytes),
+    p_config: "test-v1",
+    p_allowance: 100,
+  });
+  assert(
+    !enqueue.error,
+    "Enqueue failed: " + enqueue.error?.code + " " + enqueue.error?.message,
+  );
+  const q = await db.rpc("read_document_queue");
+  assert(!q.error && q.data.length > 0, "Private pgmq read failed.");
+  const document = (
+    await db.from("documents").select("*").eq("id", documentId).single()
+  ).data!;
+  assert(
+    (await db.rpc("document_attempt", { p_document: documentId })).data ===
+      true,
+  );
+  const payload: Workspace = (
+    await db
+      .from("synthetic_workspaces")
+      .select("payload")
+      .eq("workspace_id", workspaceId)
+      .single()
+  ).data!.payload;
+  const pipelineBatch = payload.vacancies[0].batches.at(-1)!;
+  const pipelineApp = pipelineBatch.applications.find((a) => a.id === appKey)!;
+  const result = {
+    ...pipelineApp,
+    state: "ready",
+    blocks: [
+      {
+        id: "P1_B1",
+        locator: "Page 1",
+        text: "Fictional CRM evidence",
+        assessmentText: "Fictional CRM evidence",
+        documentVersion: 1,
+        inputMethod: "parsed",
+      },
+    ],
+    assessments: Object.fromEntries(
+      pipelineBatch.rubric.map((c) => [
+        c.id,
+        {
+          category: "UNCLEAR",
+          initial: "UNCLEAR",
+          evidence: [],
+          rationale: "Human review required",
+          flagged: true,
+          checked: false,
+          reason: "",
+        },
+      ]),
+    ),
+  };
+  const completeArgs = {
+    p_document: documentId,
+    p_key: document.processing_key,
+    p_result: result,
+    p_outputs: [null, null],
+    p_usage: [],
+    p_error: null,
+  };
+  assert(
+    (await db.rpc("complete_document", { ...completeArgs, p_key: null }))
+      .data === false,
+    "Missing processing key cannot commit.",
+  );
+  // Simulate a worker dying after the third reservation and subsequent redelivery.
+  await db.from("documents").update({ attempts: 3 }).eq("id", documentId);
+  assert(
+    (await db.rpc("document_attempt", { p_document: documentId })).data ===
+      false,
+    "Fourth processing attempt must be refused.",
+  );
+  assert(
+    (
+      await db.rpc("complete_document", {
+        ...completeArgs,
+        p_result: null,
+        p_error: "PROCESSING_UNAVAILABLE",
+      })
+    ).data === true,
+    "Exhausted redelivery must become human attention.",
+  );
+  assert(
+    (await db.from("documents").select("status").eq("id", documentId).single())
+      .data?.status === "attention",
+    "Exhausted worker cannot leave document queued forever.",
+  );
+  assert(
+    (
+      await db.rpc("retry_document", {
+        p_workspace: workspaceId,
+        p_actor: admin.id,
+        p_document: documentId,
+      })
+    ).data === true,
+    "Explicit retry should recover attention state.",
+  );
+  assert(
+    (await db.rpc("document_attempt", { p_document: documentId })).data ===
+      true,
+  );
+  const completion = await db.rpc("complete_document", completeArgs);
+  assert(!completion.error && completion.data, "Atomic completion failed.");
+  assert(
+    (await db.rpc("complete_document", completeArgs)).data === true,
+    "Repeated completion must return existing result.",
+  );
+  assert(
+    (
+      await db
+        .from("assessment_runs")
+        .select("id")
+        .eq("document_id", documentId)
+    ).data!.length === 1,
+    "Redelivery cannot create a second run.",
+  );
+  assert(
+    (await db.from("source_blocks").select("id").eq("document_id", documentId))
+      .data!.length === 1,
+  );
+  assert(
+    (await read(adminCookie)).vacancies[0].batches
+      .at(-1)
+      .applications.find((a: { id: string }) => a.id === appKey).confirmed ===
+      false,
+  );
+  const memberArgs = {
+    p_workspace: workspaceId,
+    p_actor: admin.id,
+    p_user: admin.id,
+    p_role: "reviewer",
+    p_active: true,
+  };
+  assert(
+    (await db.rpc("manage_member", memberArgs)).error,
+    "Last administrator cannot be demoted.",
+  );
+  assert(
+    (await reviewer.client.rpc("manage_member", memberArgs)).error,
+    "Reviewer cannot manage membership.",
+  );
+  const budgetKey = "integration-" + randomUUID();
+  assert(
+    (
+      await db.rpc("consume_request_limit", {
+        p_key: budgetKey,
+        p_limit: 1,
+        p_seconds: 60,
+      })
+    ).data === true,
+  );
+  assert(
+    (
+      await db.rpc("consume_request_limit", {
+        p_key: budgetKey,
+        p_limit: 1,
+        p_seconds: 60,
+      })
+    ).data === false,
+  );
+  // Second retained object ensures restore checks real object bytes as well as erased content.
+  const secondDoc = randomUUID(),
+    secondApp = "CV-" + randomUUID();
+  pdf
+    .addPage()
+    .drawText("Fictional restoration fixture 2", { font, x: 30, y: 700 });
+  const secondBytes = Buffer.from(await pdf.save());
+  const freshVersion = (await read(adminCookie)).version;
+  assert(
+    (
+      await db.rpc("reserve_document", {
+        ...reserveArgs,
+        p_expected: freshVersion,
+        p_document: secondDoc,
+        p_application: secondApp,
+        p_size: secondBytes.length,
+      })
+    ).data === true,
+  );
+  assert(
+    !(
+      await db.storage
+        .from("cv-originals")
+        .upload(`${workspaceId}/${secondDoc}`, secondBytes, {
+          contentType: "application/pdf",
+        })
+    ).error,
+  );
+  assert(
+    !(
+      await db.rpc("enqueue_document", {
+        p_workspace: workspaceId,
+        p_actor: admin.id,
+        p_document: secondDoc,
+        p_hash: hash(secondBytes),
+        p_config: "test-v1",
+        p_allowance: 100,
+      })
+    ).error,
+  );
+  const secondKey = (
+    await db
+      .from("documents")
+      .select("processing_key")
+      .eq("id", secondDoc)
+      .single()
+  ).data!.processing_key;
+  assert(
+    (
+      await db.rpc("complete_document", {
+        ...completeArgs,
+        p_document: secondDoc,
+        p_key: secondKey,
+        p_result: { ...result, id: secondApp, runId: secondDoc },
+      })
+    ).data === true,
+  );
+  const backupDir = `work/recovery/integration-${workspaceId}`;
+  await mkdir(backupDir, { recursive: true, mode: 0o700 });
+  const childEnv = {
+    ...process.env,
+    NEXT_PUBLIC_SUPABASE_URL: settings.API_URL,
+    SUPABASE_SERVICE_ROLE_KEY: settings.SERVICE_ROLE_KEY,
+    WORKSPACE_ID: workspaceId,
+    BOOTSTRAP_ADMIN_USER_ID: admin.id,
+    REAL_CV_DATA_ENABLED: "false",
+  };
+  execFileSync("node", ["--import", "tsx", "scripts/backup.ts", backupDir], {
+    env: childEnv,
+    stdio: "pipe",
+  });
+  assert(
+    JSON.parse(await readFile(backupDir + "/backup.json", "utf8")).objects
+      .length === 2,
+    "Backup includes database and both originals.",
+  );
+  const backup = structuredClone(
+    (
+      await db
+        .from("synthetic_workspaces")
+        .select("payload")
+        .eq("workspace_id", workspaceId)
+        .single()
+    ).data!.payload,
+  );
+  const deletion = await db.rpc("delete_application_content", {
+    p_workspace: workspaceId,
+    p_actor: admin.id,
+    p_application: appKey,
+  });
+  assert(!deletion.error, "Authorised deletion failed.");
+  assert(
+    (await db.rpc("complete_document", completeArgs)).data === false,
+    "Deleted document cannot commit stale work.",
+  );
+  assert(
+    (
+      await db
+        .from("assessment_runs")
+        .select("id")
+        .eq("document_id", documentId)
+    ).data!.length === 0,
+  );
+  assert(
+    (await db.from("source_blocks").select("id").eq("document_id", documentId))
+      .data!.length === 0,
+  );
+  assert(
+    (
+      await db
+        .from("synthetic_workspaces")
+        .update({ payload: backup })
+        .eq("workspace_id", workspaceId)
+    ).error,
+    "Restore cannot resurrect deleted content.",
+  );
+  assert(
+    (
+      await db
+        .from("documents")
+        .update({ deletion_state: "retained" })
+        .eq("id", documentId)
+    ).error,
+    "Restored original cannot bypass deletion ledger.",
+  );
+  const entity = (
+    await db.rpc("record_id", { p_workspace: workspaceId, p_key: appKey })
+  ).data;
+  assert(
+    !(
+      await db.rpc("finish_deletion", {
+        p_workspace: workspaceId,
+        p_entity: entity,
+      })
+    ).error,
+  );
+  const currentLedger = (
+    await db.from("deletion_ledger").select("*").eq("workspace_id", workspaceId)
+  ).data!;
+  await writeFile(
+    backupDir + "/current-deletions.json",
+    JSON.stringify({
+      workspaceId,
+      at: new Date().toISOString(),
+      ledger: currentLedger,
+    }),
+    { mode: 0o600 },
+  );
+  assert(
+    !(
+      await db.storage
+        .from("cv-originals")
+        .remove([`${workspaceId}/${documentId}`, `${workspaceId}/${secondDoc}`])
+    ).error,
+  );
+  await cleanupWorkspace(workspaceId);
+  execFileSync(
+    "node",
+    [
+      "--import",
+      "tsx",
+      "scripts/restore.ts",
+      backupDir,
+      backupDir + "/current-deletions.json",
+    ],
+    {
+      env: { ...childEnv, RESTORE_SYNTHETIC_CONFIRM: "EMPTY TARGET" },
+      stdio: "pipe",
+    },
+  );
+  const restoredFile = (
+    await db.storage
+      .from("cv-originals")
+      .download(`${workspaceId}/${secondDoc}`)
+  ).data;
+  assert(
+    restoredFile &&
+      hash(Buffer.from(await restoredFile.arrayBuffer())) === hash(secondBytes),
+    "Restored storage hash must match.",
+  );
+  assert(
+    (
+      await db.storage
+        .from("cv-originals")
+        .exists(`${workspaceId}/${documentId}`)
+    ).data === false,
+    "Deleted original must not return.",
+  );
+  assert(
+    (await db.from("documents").select("id").eq("workspace_id", workspaceId))
+      .data!.length === 1,
+    "Restore filters deleted document row.",
+  );
+  const restored = (
+    await db
+      .from("synthetic_workspaces")
+      .select("payload")
+      .eq("workspace_id", workspaceId)
+      .single()
+  ).data!.payload;
+  assert(
+    restored.vacancies[0].batches
+      .at(-1)
+      .applications.find((a: { id: string }) => a.id === appKey).blocks
+      .length === 0,
+    "Restore reapplies deletion to aggregate.",
+  );
+  assert(
+    (
+      await db
+        .from("workspaces")
+        .select("settings")
+        .eq("id", workspaceId)
+        .single()
+    ).data!.settings.paused === true,
+    "Restore stays paused.",
+  );
+  assert(
+    !(
+      await db.storage
+        .from("cv-originals")
+        .remove([`${workspaceId}/${secondDoc}`])
+    ).error,
+  );
+  console.log(
+    "PASS: actual private object/database backup, empty-target restore, row counts and rehashed originals; current deletion ledger prevents resurrection; restored intake remains paused.",
+  );
+  console.log(
+    "PASS: normalized projection, private pgmq, reservation concurrency, atomic result/redelivery, source records, last-admin protection, rate limits, deletion during processing and restore resurrection denial.",
   );
   console.log(
     "PASS: local Supabase migrations, MFA, membership, outsider/removal denial, role escalation denial, direct RPC/Data API denial, private bucket, forged upload denial, second-reviewer resume, stale/concurrent saves, immutable SQL snapshot, audit append.",
@@ -396,27 +962,8 @@ try {
   server?.kill("SIGTERM");
   if (workspaceId) {
     assert(/^[0-9a-f-]{36}$/.test(workspaceId));
-    execFileSync(
-      "docker",
-      [
-        "exec",
-        "supabase_db_shortlist-local",
-        "psql",
-        "-U",
-        "postgres",
-        "-d",
-        "postgres",
-        "-c",
-        `delete from public.audit_events where workspace_id='${workspaceId}';`,
-      ],
-      { stdio: "ignore" },
-    );
-    await db
-      .from("synthetic_workspaces")
-      .delete()
-      .eq("workspace_id", workspaceId);
-    await db.from("workspace_members").delete().eq("workspace_id", workspaceId);
-    await db.from("workspaces").delete().eq("id", workspaceId);
+    await cleanupWorkspace(workspaceId);
   }
   for (const u of users) await db.auth.admin.deleteUser(u.id);
+  for (const id of invitedUsers) await db.auth.admin.deleteUser(id);
 }

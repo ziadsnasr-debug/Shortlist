@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -39,6 +39,8 @@ import {
   individualCheck,
   highest,
 } from "@/lib/workflow";
+import { DocumentIntake } from "./document-intake";
+import { Administration } from "./administration";
 import { sampleRubric } from "@/fixtures/synthetic/seed";
 type PublicApp = Omit<Application, "name"> & {
   name?: string;
@@ -54,6 +56,7 @@ type State = Omit<Workspace, "vacancies"> & {
   vacancies: PublicVacancy[];
   role: string;
   mode: string;
+  capabilities?: { uploads: boolean; ai: boolean };
 };
 type Send = (action: Action, version?: number) => Promise<State | null>;
 const steps = ["Criteria", "Add CVs", "Review", "Shortlist"];
@@ -68,6 +71,7 @@ function Panel({ children }: { children: React.ReactNode }) {
   return <section className="panel">{children}</section>;
 }
 export function WorkspaceApp() {
+  const [admin, setAdmin] = useState(false);
   const [unsaved, setUnsaved] = useState(false);
   const [state, setState] = useState<State | null>(null),
     [error, setError] = useState(""),
@@ -79,7 +83,7 @@ export function WorkspaceApp() {
     [dialog, setDialog] = useState(false),
     [help, setHelp] = useState(false),
     [reveal, setReveal] = useState(false);
-  async function load(revealNames = false) {
+  const load = useCallback(async (revealNames = false) => {
     try {
       const response = await fetch(`/api/workspace?reveal=${revealNames}`, {
         cache: "no-store",
@@ -91,10 +95,13 @@ export function WorkspaceApp() {
     } catch (e) {
       setError((e as Error).message);
     }
-  }
+  }, []);
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
+  const refresh = useCallback(() => {
+    void load();
+  }, [load]);
   const vacancy =
     state?.vacancies.find((v) => v.id === vacancyId) ?? state?.vacancies[0];
   const batch =
@@ -192,8 +199,8 @@ export function WorkspaceApp() {
       <main>
         <div className="demo-banner">
           <span>
-            <strong>Synthetic POC.</strong> Fictional CVs only. No real uploads
-            or AI calls.
+            <strong>Synthetic POC.</strong> Fictional CVs only. Real applicant
+            data remains disabled.
           </span>
           <span>{state?.mode ?? "Connecting"}</span>
         </div>
@@ -211,8 +218,18 @@ export function WorkspaceApp() {
             </Panel>
           ) : !state || !vacancy || !batch ? (
             <p role="status">Loading your workspace…</p>
+          ) : admin ? (
+            <>
+              <Button variant="outline" onClick={() => setAdmin(false)}>
+                Back to workspace
+              </Button>
+              <Administration />
+            </>
           ) : home ? (
             <>
+              <Button variant="outline" onClick={() => setAdmin(true)}>
+                Administration
+              </Button>
               <header className="pagehead">
                 <div>
                   <h1>Your vacancies</h1>
@@ -358,6 +375,7 @@ export function WorkspaceApp() {
               </nav>
               {step === 0 && (
                 <Criteria
+                  ai={state.capabilities?.ai ?? false}
                   key={`${batch.id}-${batch.published}`}
                   vacancy={vacancy}
                   batch={batch}
@@ -374,6 +392,9 @@ export function WorkspaceApp() {
                   send={send}
                   busy={busy}
                   onNext={() => setStep(2)}
+                  onRefresh={refresh}
+                  version={state.version}
+                  uploads={state.capabilities?.uploads ?? false}
                 />
               )}
               {step === 2 && (
@@ -490,6 +511,7 @@ export function WorkspaceApp() {
   );
 }
 function Criteria({
+  ai,
   vacancy,
   batch,
   send,
@@ -503,6 +525,7 @@ function Criteria({
   busy: boolean;
   onNext: () => void;
   onDirty: (v: boolean) => void;
+  ai: boolean;
 }) {
   const [rubric, setRubric] = useState<Criterion[]>(batch.rubric),
     [dirty, setDirty] = useState(false);
@@ -541,6 +564,40 @@ function Criteria({
           Criteria suggestions are editable examples, not AI output. Employer
           approval is required before publication.
         </Notice>
+      )}
+      {!batch.published && (
+        <div className="my-4">
+          <Button
+            variant="outline"
+            disabled={!ai || busy}
+            onClick={async () => {
+              try {
+                const r = await fetch("/api/criteria", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      vacancyId: vacancy.id,
+                      synthetic: true,
+                    }),
+                  }),
+                  d = await r.json();
+                if (!r.ok) throw new Error(d.error);
+                setRubric(d.rubric);
+                setDirty(true);
+              } catch (e) {
+                toast.error((e as Error).message);
+              }
+            }}
+          >
+            Draft criteria with AI
+          </Button>
+          {!ai && (
+            <p>
+              AI drafting needs approved provider configuration. Edit example
+              criteria directly.
+            </p>
+          )}
+        </div>
       )}
       <Panel>
         <fieldset
@@ -751,12 +808,18 @@ function Intake({
   send,
   busy,
   onNext,
+  onRefresh,
+  version,
+  uploads,
 }: {
   vacancy: PublicVacancy;
   batch: PublicBatch;
   send: Send;
   busy: boolean;
   onNext: () => void;
+  onRefresh: () => void;
+  version: number;
+  uploads: boolean;
 }) {
   const [disposition, setDisposition] = useState<PublicApp | null>(null);
   return (
@@ -771,9 +834,19 @@ function Intake({
         </div>
       </div>
       <Notice>
-        Real file intake is disabled. Six fictional CVs cover agreed evidence, a
-        disagreement, a tie and suspicious source content.
+        Six fictional sample CVs cover agreed evidence, a disagreement, a tie
+        and suspicious source content.
       </Notice>
+      <DocumentIntake
+        vacancyId={vacancy.id}
+        batchId={batch.id}
+        version={version}
+        closed={batch.closed}
+        applications={batch.applications as Application[]}
+        onRefresh={onRefresh}
+        send={send}
+        enabled={uploads}
+      />
       <Panel>
         {!batch.applications.length ? (
           <div className="empty">
@@ -816,7 +889,11 @@ function Intake({
                   ? "Disposition recorded"
                   : a.confirmed
                     ? "Reviewed"
-                    : "Ready to review"}
+                    : a.state === "ready"
+                      ? "Ready to review"
+                      : a.state === "processing"
+                        ? "Processing"
+                        : "Needs readable copy or attention"}
               </Badge>
               {!batch.closed && a.state !== "disposed" && (
                 <Button
@@ -838,7 +915,14 @@ function Intake({
             : "Start review explicitly closes intake for this batch."}
         </p>
         <Button
-          disabled={busy || !batch.published || !batch.applications.length}
+          disabled={
+            busy ||
+            !batch.published ||
+            !batch.applications.length ||
+            batch.applications.some(
+              (a) => !["ready", "disposed"].includes(a.state),
+            )
+          }
           onClick={async () => {
             if (
               batch.closed ||
@@ -1226,7 +1310,14 @@ function ReviewForm({
         <section className="source">
           <div className="source-header">
             <h2>Source context</h2>
-            <p>{app.id} · Synthetic text · Claims remain unverified</p>
+            <p>
+              {app.id} · Minimised synthetic source view · Claims remain
+              unverified
+            </p>
+            <p>
+              Identity masking may change displayed passages. Authorised
+              originals are available in Add CVs for checking.
+            </p>
           </div>
           <div className="source-body">
             {app.blocks.map((b) => (

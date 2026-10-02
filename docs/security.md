@@ -1,24 +1,24 @@
 # Mandatory Appendix A control register
 
-Synthetic development only. **Real CV intake remains disabled by code.** An unresolved mandatory control blocks real applicant data. Passing workflow tests does not establish model accuracy, fairness, UK-exclusive processing, sandbox isolation or customer acceptance.
+Real CV activation remains blocked. Local/mocked checks are evidence of their tested scope, not a real-pilot security certification.
 
-| Control | Current implementation / evidence | Remaining real-pilot proof |
+| Control | Implemented/tested scope | Remaining proof before real pilot |
 |---|---|---|
-| SEC01 Untrusted inputs, human-published fixed rubric | Strict action schema, frozen published rubric, preset suggestions labelled synthetic | JD/CV/prompt attacks with actual provider and immutable rubric evidence |
-| SEC02 No model authority or cross-app context | No provider, tools or external action execution; strict output contract | Hostile provider replacement and actual inference-context isolation |
-| SEC03 File bounds and secretless denied-network sandbox | Upload disabled; private bucket and documented bounds only | Actual signature/ZIP limits, network/DNS denial, planted-secret test, timeout/memory containment |
-| SEC04 Source and criterion validation | Unit tests reject extra/duplicate/foreign/stale IDs, missing support and excessive rationale | Parser-generated real provenance and human semantic audit |
-| SEC05 Visible failures, no detector scoring | Domain blocks unreadable files and UNCLEAR; source flags require checking and do not change points | Browser handling of actual malformed/scanned/timed-out documents and retry |
-| SEC06 Human review and atomic finalisation | Pure gates, endpoint checks, versioned Postgres transaction, ties/essentials/snapshot tests | Customer trained review, normalized document/rubric/run consistency and hosted gates |
-| SEC07 Membership, MFA, roles and private storage | Local Supabase AAL2, outsider/removal/role/direct-write/forged-upload denial tests | In-app invitation/admin flow, hosted session/revocation/preview/download/export object checks, rate limits |
-| SEC08 Escaped display and safe CSV | React text rendering, no model HTML or remote embeds; CSV-prefix unit tests, snapshot export | Hostile text browser tests across final surfaces and actual spreadsheet importer audit |
-| SEC09 No sensitive telemetry, shared caching or browser persistence | No analytics/replay; HTTP-only sessions; private no-store headers; no browser local storage | Inspect full provider/parser errors and logs once implemented; bundle/telemetry audit |
-| SEC10 Pinned dependencies and isolated previews | Exact package versions, lockfile, local audit, CI checks and secret scan configuration | Pinned parser snapshot, dependency notices, configured hosted environment separation and release review |
-| SEC11 Approved processing, retention, transfers and geography | Synthetic only; no live provider route; requested London application region | Written customer decisions, contracts, provider account/region tests, deployed geography/failover proof |
-| SEC12 Idempotency, bounded retry, deletion and restore | Private pgmq schema created; no consumer; synthetic concurrency and frozen snapshot checks | Atomic processing completion, safe queue redelivery, retry/cost bounds, deletion during processing, object+DB restore |
+| SEC01 | Strict actions, fixed published criteria; untrusted JD/source separation; hostile rendered criteria remain inert | Actual provider/JD/CV attack comparisons and immutable rubric checks |
+| SEC02 | No AI tools/actions or shared applicant context; two fresh mocked calls and hostile-output rejection | Actual inference-context audit and paired model attacks |
+| SEC03 | Size/signature, actual ZIP expansion/count limits, PDF pages/text/output bounds; secretless denied-network ephemeral controller, fixed commands and finally cleanup | Managed sandbox DNS/network/canary/memory/time probes, malformed/resource exhaustion containment |
+| SEC04 | Exact criterion/reference/version/support validation, bounded rationale; stable parser source IDs; foreign/extra output rejection | Human semantic evidence audit on held-out actual model results |
+| SEC05 | Processing/readable-copy/attention items block closure; manual passages labelled; warnings never change points | Hosted file/retry/manual-handling browser exercise |
+| SEC06 | Application review, essential/disagreement checks, versioned finalisation, reasons/ties/zero-to-three selection | Trained recruiter acceptance and hosted gate tests |
+| SEC07 | AAL2, active membership, server-selected workspace, roles, private paths/downloads, invitations, last-admin protection and transactional limits | Hosted invitation delivery/onboarding/session revocation and region isolation |
+| SEC08 | Escaped React text; no active original inline; attachment downloads; CSV-prefix guards; hostile markup browser test | Spreadsheet-import audit and wider adversarial surfaces |
+| SEC09 | Private/no-store, HTTP-only sessions, no replay/analytics/browser applicant persistence, safe errors, disabled inference telemetry | Hosted traces/logs/provider retention/bundle audit |
+| SEC10 | Pinned packages/lockfile, parser bundle hash and snapshot tooling, source scan, manifest, synthetic CI | Actual pinned snapshot, separate hosted secrets, release review and cloud configuration evidence |
+| SEC11 | Synthetic-only fail-closed activation, direct approved endpoint intent, London/no-failover sandbox configuration | Customer contracts, data map, transfers, exact provider/account and deployed geography; no UK-exclusive claim |
+| SEC12 | Private pgmq, atomic idempotent completion, retry/deadline/budget bounds, deletion during processing and restoration denial; actual local DB/object restore and hashes | Hosted fault/restore exercise, approved retention/legal holds, independent customer acceptance and deletion follow-through for exports/backups |
 
-Production CSP uses per-request script nonces and no unsafe-inline script allowance. Inline styles are allowed for component styling. Original active documents are not served. Authentication operations use normal Supabase MFA and no public sign-up; manual invitation/account completion precedes login.
+Per-request nonce CSP protects production scripts; styles allow inline component styling. Connect-src includes only the configured Supabase origin plus local development sockets. Original documents are never active app-origin embeds. Streamed JSON body caps, origin checks and private headers cover mutations.
 
-Minimum Stage 5 adversarial suite remains 20 clean/altered CV pairs (visible/hidden instructions, Unicode, formatting, quoted security examples and score manipulation). Zero unauthorised actions, invalid evidence acceptance or silent omissions are required; unexplained category changes are investigated. Those pairs have not been executed against an AI model.
+20 adversarial pairs are prepared, not semantically evaluated. Actual category changes, critical misses, support quality, repeatability and timing remain pending. No security or fairness claims from passing mock tests.
 
-Customer must approve data map, privacy purpose/basis/notices/DPIA assessment, contracts/transfers, actual retention, reviewer training, incident owner and supervised scope. UK-exclusive processing remains an explicit decision, not an inference from a London database. No real-data release with unresolved high/critical security findings.
+Finalised decisions cannot be reopened. A privileged deletion purges/redacts content with an integrity receipt; it does not permit another hiring decision. This explicit exception and the approved retention/hold process need customer signoff. Exported copies and old backups need separate lifecycle controls; a live database purge does not erase them remotely.

@@ -696,3 +696,12 @@ textarea {
     gap: 18px;
   }
 }
+
+/* Keep notification text readable throughout entrance motion. */
+[data-sonner-toast][data-styled="true"] {
+  opacity: 1 !important;
+  color: #172b4d;
+}
+[data-sonner-toast][data-front="true"] [data-content] {
+  opacity: 1 !important;
+}

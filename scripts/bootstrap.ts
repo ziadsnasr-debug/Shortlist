@@ -19,13 +19,11 @@ const { data: workspace, error } = await client
   .select("id")
   .single();
 if (error) throw new Error("Workspace setup failed.");
-const { error: memberError } = await client
-  .from("workspace_members")
-  .insert({
-    workspace_id: workspace.id,
-    user_id: admin,
-    role: "administrator",
-  });
+const { error: memberError } = await client.from("workspace_members").insert({
+  workspace_id: workspace.id,
+  user_id: admin,
+  role: "administrator",
+});
 if (memberError) throw new Error("Membership setup failed.");
 const { error: stateError } = await client
   .from("synthetic_workspaces")

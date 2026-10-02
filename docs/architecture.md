@@ -1,33 +1,31 @@
 # Architecture
 
-One Next.js App Router application, React, TypeScript, Tailwind CSS and upstream shadcn/ui components. No Python worker, autonomous agent, vector store or custom queue lease service.
+One Next.js/React/TypeScript application with Tailwind/shadcn, Supabase Auth/Postgres/private Storage/pgmq, an ephemeral managed parser and one direct provider. No autonomous agents, Python worker, gateway or custom queue lease system.
 
-## Authoritative workflow
+## Authority
 
-`lib/workflow.ts` holds pure scoring and transition rules. Maximum points are positive integers totalling 100; score uses integer half-point arithmetic. UNCLEAR has no numeric value. Official scores exist only after valid application-level confirmation. Credited categories require current-document source references. Model agreement is not semantic proof.
+`lib/workflow.ts` validates 100-point integer rubrics and exact half-point scoring. UNCLEAR blocks confirmation; evidence IDs belong to the current document. Every active application needs meaningful human review. Scores, comparative ranking and names remain absent from server responses until the whole-batch review gate; name reveal is explicit. Publication freezes criteria; finalisation freezes adjudication. API clients cannot submit official scores, review timestamps or snapshots.
 
-`app/api/workspace/route.ts` parses a strict action contract and checks session ownership and origin on every request. Client code cannot submit an official score, review timestamp or frozen snapshot. Responses remove identities until every active application is reviewed and an explicit reveal is requested. Comparative ranking is absent from responses before the whole-batch gate. Individual scores appear after that application is confirmed.
+The small synthetic workflow remains a server-only versioned JSON aggregate. Postgres projects vacancies, batches and applications into normalized relations in the same transaction. Documents, sources, private assessment runs and reviews use separate normalized records. A locking CAS operation checks membership/role, protects frozen batches and appends safe audit records. Browser Data API access to applicant relations/RPCs is denied. This aggregate/projection approach is transitional, not a proven production scaling design.
 
-Published rubrics freeze. Intake closes explicitly. Only reasoned duplicate, withdrawal or wrong-vacancy dispositions are accepted before closure. Changes clear application confirmation and provisional selections. Finalisation rechecks every gate, selection count, reasons, ties and essential exceptions. Frozen snapshots include effective assessments, source context and reviewed versions. Exports read snapshots and neutralise spreadsheet formulas.
+## Documents and processing
 
-## Stage 2 synthetic persistence
+A server-authorized reservation creates an application and unique private path. Expiring signed uploads use no upsert. Finalisation reads actual private bytes and checks signature, length and batch duplicate hash before a private queue receives an identifier. No CV text enters messages. Uploaded original filenames remain private; ordinary intake uses an anonymous record.
 
-Local mode stores server JSON with atomic rename and a per-workspace process lock. Supabase mode uses invitation-created Auth accounts, mandatory AAL2, active workspace membership and trusted database roles. Server-only service credentials never enter browser code. A service credential bypasses RLS, so every operation explicitly checks membership before database access.
+The controller starts a pinned snapshot with `persistent:false`, London, no failover, denied network and empty environment. Bytes cross the control API into a fixed temporary path. Fixed commands enforce a 30-second parser timeout and 256 MiB Node heap; the microVM allocation is separately bounded. Cleanup always stops the VM. No implicit persistence may snapshot a CV. Actual deployed memory/DNS/network isolation still needs verification.
 
-A transitional `synthetic_workspaces` aggregate stores the small synthetic workflow. Optimistic version matching is checked both in TypeScript and a locking Postgres RPC. The RPC checks active membership and administrator-only operations, freezes entire finalised batches and appends an audit event within the same transaction. Direct authenticated reads/writes to the aggregate and RPC are denied. This prevents hidden names or ranking leaking through the Data API.
+PDF.js preserves page/item locations; Mammoth raw text preserves DOCX paragraphs/tables without page inventions. DOCX validation counts actual streamed expanded bytes and entry bounds before extraction. Failed or mixed unreadable pages remain visible. Source blocks retain original and minimized text separately. The public source view uses minimized text; an explicitly requested 60-second attachment download lets an authorized reviewer inspect the original outside the app origin. Masking is incomplete and flagged for human checking.
 
-Normalized relations from specification section 8 are created for Stage 3. They are currently deny-by-default to clients and **are not populated by the synthetic workflow**. They must replace the aggregate before real document processing. Do not claim production document persistence from existence of those tables.
+Pgmq supplies visibility; maximum two messages per invocation, 360-second visibility and 240-second function ceiling. An internal deadline avoids beginning another full job near the ceiling. Completion locks workspace then document, rejects deleted/disposed/stale/closed states, stores result/source/run and patches aggregate atomically. Acknowledgment follows commit. Duplicate processing returns an existing run. Three attempts lead to visible attention; an administrator can retry. Reservation/attempt/draft counters cap monthly work; rate limits are transactionally shared.
 
-The private `cv-originals` bucket has a 5 MiB limit and MIME bounds, with no browser policies yet. Pgmq creates one private durable queue. There is no upload endpoint, parser execution, consumer, cron or document preview URL. Their absence is deliberate until Stage 3 isolation is demonstrated.
+## AI
 
-## AI boundary
+Direct `createAnthropic` provider objects and `generateText`/`Output.object` use an exact configured model ID, no tools, no gateway, no custom endpoint and no provider fallback. Each fresh request sees one minimized CV and approved definitions, not applicant identity/weights/scores/other CVs/the other pass. Native strict output format is requested. Telemetry is disabled and raw exceptions are not logged. Invalid or disagreeing results become UNCLEAR. Two matching calls and valid references do not prove semantic support; human audit and held-out evaluation remain necessary.
 
-`lib/config.ts` centralises provider, tested model ID, prompt/schema versions, two-pass intent, timeout and output bounds. AI is disabled; there is no default model alias. `lib/assessment.ts` validates exact criterion sets, categories, 25-word rationale limits and current evidence IDs. Invalid or disagreeing passes become UNCLEAR. It does not validate semantic truth or invoke a provider.
+AI is disabled by default. Claude subscription authentication is advisory access, not an application API credential. Tests mock calls; no live provider capability or accuracy is claimed.
 
-Stage 4 implements direct Anthropic provider objects using `generateText` and `Output.object`, after account/capability/region verification. No gateway, tools, browsing, fallback provider or shared applicant context. Synthetic suggestions in Stage 1 are labelled preset practice data; they are not simulated live success.
+## Deletion and recovery
 
-## Hosting
+Normal operations cannot reopen or change finalised decisions. Authorized privacy deletion is a separate purge, not adjudication: source/model/review content and original objects are removed, the displayed snapshot is redacted, and a hash receipt records its prior content. Customer must approve this retention/immutability interpretation before real use. Failed object removal remains in the deletion ledger for cron recovery. Database triggers prevent known deleted content from being reinserted.
 
-`vercel.json` requests London (`lhr1`). Next.js route-level `preferredRegion` is deprecated in the installed version, so region belongs in deployment configuration. Customer must verify actual execution geography and failover policy. A deployment setting is not a UK-exclusive processing guarantee.
-
-Production scripts use per-request nonce CSP and private no-store headers. Text rendering stays escaped. Inline style allowance exists for component styling; script allowance uses nonces rather than unsafe-inline. Do not add analytics or session replay to applicant surfaces.
+Backup tooling exports synthetic aggregate, normalized documents/sources/runs/reviews, safe audits, objects and hashes without Auth secrets. Restore refuses overwrite, requires a separately current deletion ledger, verifies ownership/hashes, reapplies deletions and leaves intake paused. Historical reviewer attribution requires customer reconciliation; an independent fresh-account exercise remains outstanding.

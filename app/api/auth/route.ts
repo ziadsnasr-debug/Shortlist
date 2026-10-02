@@ -1,7 +1,10 @@
+import { readBoundedText } from "@/lib/http";
 import { validOrigin } from "@/lib/origin";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { sessionClient } from "@/lib/supabase";
+import { WorkflowError } from "@/lib/workflow";
+import { rateLimit } from "@/lib/rate-limit";
 import { configuration } from "@/lib/config";
 export async function POST(req: NextRequest) {
   const headers = { "Cache-Control": "private, no-store" };
@@ -16,8 +19,16 @@ export async function POST(req: NextRequest) {
         { error: "Local synthetic mode needs no sign in." },
         { status: 400, headers },
       );
-    const raw = await req.text();
-    if (raw.length > 5000) throw new Error();
+    await rateLimit(
+      process.env.VERCEL
+        ? (req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown")
+        : "loopback",
+      "auth",
+      20,
+      60,
+    );
+    const raw = await readBoundedText(req, 10000);
+    if (raw.length > 10000) throw new Error();
     const input = z
       .discriminatedUnion("type", [
         z
@@ -36,9 +47,41 @@ export async function POST(req: NextRequest) {
           })
           .strict(),
         z.object({ type: z.literal("logout") }).strict(),
+        z
+          .object({
+            type: z.literal("session"),
+            accessToken: z.string().min(1).max(6000),
+            refreshToken: z.string().min(1).max(2000),
+          })
+          .strict(),
+        z
+          .object({
+            type: z.literal("password"),
+            password: z.string().min(12).max(200),
+          })
+          .strict(),
       ])
       .parse(JSON.parse(raw));
     const client = await sessionClient();
+    if (input.type === "session") {
+      const { error } = await client.auth.setSession({
+        access_token: input.accessToken,
+        refresh_token: input.refreshToken,
+      });
+      if (error) throw new Error();
+      const { data } = await client.auth.getUser();
+      if (!data.user) throw new Error();
+      return NextResponse.json({ ok: true }, { headers });
+    }
+    if (input.type === "password") {
+      const { data } = await client.auth.getUser();
+      if (!data.user) throw new Error();
+      const { error } = await client.auth.updateUser({
+        password: input.password,
+      });
+      if (error) throw new Error();
+      return NextResponse.json({ ok: true }, { headers });
+    }
     if (input.type === "login") {
       const { error } = await client.auth.signInWithPassword({
         email: input.email,
@@ -78,7 +121,12 @@ export async function POST(req: NextRequest) {
     const { error } = await client.auth.signOut();
     if (error) throw new Error();
     return NextResponse.json({ ok: true }, { headers });
-  } catch {
+  } catch (error) {
+    if (error instanceof WorkflowError)
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status, headers },
+      );
     return NextResponse.json(
       {
         error: "Authentication failed. Check your invitation and credentials.",

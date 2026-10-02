@@ -23,6 +23,7 @@ test("complete synthetic batch, tie gate, immutable export", async ({
   const before = await pending.json();
   expect(before.vacancies[0].batches[0].ranking).toBeNull();
   expect(JSON.stringify(before)).not.toContain("Morgan Ellis");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.getByRole("button", { name: "Start review", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Review the evidence", exact: true }),
@@ -33,6 +34,7 @@ test("complete synthetic batch, tie gate, immutable export", async ({
       path: process.env.SHORTLIST_CAPTURE_DIR + "/shortlist-review.png",
     });
   }
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   for (let i = 0; i < 6; i++) {
     await expect(
       page.getByText(`A${101 + i}`, { exact: true }).first(),
@@ -65,6 +67,7 @@ test("complete synthetic batch, tie gate, immutable export", async ({
   await expect(
     page.getByRole("heading", { name: "Choose your shortlist", exact: true }),
   ).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page
     .getByRole("button", { name: "Select highest scores", exact: true })
     .click();
@@ -201,4 +204,61 @@ test("accessible criteria and keyboard dialog", async ({ page }) => {
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).not.toBeVisible();
+});
+
+test("hostile criteria text stays inert through review and no original is served inline", async ({
+  page,
+}) => {
+  const calls: string[] = [];
+  page.on("request", (r) => {
+    if (!r.url().startsWith("http://127.0.0.1:3217")) calls.push(r.url());
+  });
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Set the criteria" }),
+  ).toBeVisible();
+  const state = await (await page.request.get("/api/workspace")).json();
+  const rubric = state.vacancies[0].batches[0].rubric;
+  rubric[0].title =
+    '<img src="https://example.invalid/tracker" onerror="alert(1)">';
+  const saved = await page.request.post("/api/workspace", {
+    headers: { origin: "http://127.0.0.1:3217" },
+    data: {
+      version: state.version,
+      action: {
+        type: "rubric",
+        vacancyId: "customer-success",
+        batchId: "first-batch",
+        rubric,
+      },
+    },
+  });
+  expect(saved.status()).toBe(200);
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Publish criteria", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Add sample CVs", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Start review", exact: true }).click();
+  await expect(page.getByText(rubric[0].title, { exact: true })).toBeVisible();
+  expect(
+    await page.locator('img[src^="https://example.invalid"]').count(),
+  ).toBe(0);
+  expect(await page.locator("iframe, object, embed").count()).toBe(0);
+  expect(calls).toEqual([]);
+});
+
+test("queue endpoint denies missing and forged cron credentials", async ({
+  request,
+}) => {
+  expect((await request.get("/api/cron")).status()).toBe(401);
+  expect(
+    (
+      await request.get("/api/cron", {
+        headers: { authorization: "Bearer synthetic-forged" },
+      })
+    ).status(),
+  ).toBe(401);
 });

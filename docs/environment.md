@@ -1,24 +1,25 @@
 # Environment inventory
 
-`.env.example` has names and safe mode defaults only. Actual secrets remain in local process environments or provider secret stores; never commit them.
+Use `.env.example`; never commit actual values. Separate customer-owned staging/production projects and provider secrets. Previews remain synthetic.
 
-| Variable | Use | Browser exposure |
-|---|---|---|
-| PERSISTENCE_MODE | `local-synthetic` or `supabase-synthetic` | Mode label only |
-| APP_ENV | Environment label: local/staging/production; no real-data approval implied | No |
-| REAL_CV_DATA_ENABLED | Must remain false; true refuses startup operations | No |
-| APP_URL | Exact canonical app origin for mutation checks; required for hosted use | Origin only |
-| WORKSPACE_ID | Server-selected workspace UUID from bootstrap | No role authority granted by UUID |
-| NEXT_PUBLIC_SUPABASE_URL | Selected environment's Supabase endpoint | Public configuration |
-| NEXT_PUBLIC_SUPABASE_ANON_KEY | Public project key; still requires authenticated membership | Public configuration |
-| SUPABASE_SERVICE_ROLE_KEY | Privileged server operations, never sent to browser | Never |
-| ANTHROPIC_API_KEY | Stage 4 direct provider calls; unused today | Never |
-| AI_MODEL_ID | Exact tested model identifier; no assumed Opus alias | No |
-| VERCEL_OIDC_TOKEN | Stage 3 sandbox controller; unused today | Never |
-| PARSER_SNAPSHOT_ID | Pinned dependency-only sandbox image; unused today | No |
-| CRON_SECRET | Stage 3 queue endpoint protection; unused today | Never |
-| BOOTSTRAP_ADMIN_USER_ID | Setup process only, existing invited administrator | No |
+| Variable | Purpose |
+|---|---|
+| PERSISTENCE_MODE | local-synthetic or supabase-synthetic; hosted local mode refused |
+| APP_ENV | local/staging/production label, not data approval |
+| REAL_CV_DATA_ENABLED | false; true refuses workflow and consumer activation |
+| APP_URL | Exact origin and invitation redirect; required hosted |
+| WORKSPACE_ID | Workspace selected on server after verified membership |
+| NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY | Public connection configuration; grants/RLS still restrict data |
+| SUPABASE_SERVICE_ROLE_KEY | Privileged server/setup only; never browser |
+| AI_ENABLED / ANTHROPIC_API_KEY / AI_MODEL_ID | Direct synthetic inference, disabled by default; exact tested ID required |
+| MONTHLY_PROCESSING_ALLOWANCE | Default 240 units; reservation, each attempt and each criteria draft consumes one. Not a supplier currency quote |
+| PARSER_SNAPSHOT_ID / PARSER_BUNDLE_SHA256 | Exact dependency-only snapshot and verified bundle hash |
+| VERCEL_OIDC_TOKEN | Sandbox controller authentication on Vercel; never parser env |
+| VERCEL_TOKEN / VERCEL_TEAM_ID / VERCEL_PROJECT_ID | Optional explicit local Sandbox controller authentication |
+| CRON_SECRET | Timing-safe protected queue/deletion recovery endpoint |
+| BOOTSTRAP_ADMIN_USER_ID | Existing invited admin UUID for setup/restore |
+| RESTORE_SYNTHETIC_CONFIRM | EMPTY TARGET for explicit isolated synthetic restore |
 
-Use separate Supabase projects and provider secrets for staging and production. Vercel previews remain synthetic with staging-only secrets; do not share production applicant databases with preview branches. Service credentials can bypass RLS and must be treated as privileged credentials.
+At most two 4,000-output-token calls per attempt, three automatic attempts, bounded input and monthly counters prevent unbounded processing. Manual retries consume the same allowance on each attempt. Set vendor spend limits/alerts and customer-approved budgets too. Counter configuration changes must be reviewed; this is not a guarantee of a particular bill.
 
-The current parser snapshot and inference modules do not consume credentials, and no external provider cost has been incurred by this build. Changing keys alone does not certify a provider's capabilities, retention or geography.
+A Claude subscription used for advice does not supply an Anthropic API key. Provider keys are consumed only by the configured direct route; no substitution with CLI assessment or OAuth credentials.

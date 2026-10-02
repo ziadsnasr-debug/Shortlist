@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
 let commit = "uncommitted";
@@ -16,7 +16,14 @@ const manifest = {
   devDependencies: pkg.devDependencies,
   specification: "1.2 / 2026-10-02",
   data: "synthetic only",
-  aiEnabled: false,
+  defaultAiEnabled: false,
+  evidencePromptVersion: "evidence-v1",
+  extractionVersion: "extract-v1",
+  parserBundle: existsSync("work/parser/manifest.json")
+    ? JSON.parse(readFileSync("work/parser/manifest.json", "utf8"))
+    : null,
+  activation:
+    "Synthetic implementation; hosted, model and human exit gates pending",
   parserSnapshot: null,
   providerModel: null,
 };

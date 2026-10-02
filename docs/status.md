@@ -1,16 +1,16 @@
 # Build status — 2 October 2026
 
-| Stage | Status | Exit evidence / remaining work |
+Implementation advanced through the remaining stages using synthetic data. Stage exit gates are not all achieved.
+
+| Stage | Implemented and locally demonstrated | Outstanding exit evidence |
 |---|---|---|
-| 1 Workflow | Implemented, local automated workflow verified | Four steps, criterion editing/publication, six fictional CVs, explicit intake closure, full evidence review, drafts, hidden ranking/identity, ties, exceptions, zero-to-three selection, frozen export, next batch. Independent recruiter usability run still required. |
-| 2 Ownership and persistence | Local foundation implemented; incomplete | Migrations applied on isolated local Supabase. Auth/MFA, memberships/RLS/grants, private bucket, server-only writes, CAS transaction, audit, second-reviewer resume and prohibited access tested. In-app invitations, customer accounts, hosted setup and provider capability spike remain. Transitional synthetic aggregate is not normalized document persistence. |
-| 3 Documents and queue | Not implemented | Schema/private bucket/private queue reserved. Real uploads, signature/ZIP validation, sandbox snapshot, minimisation, stable source blocks, consumer/idempotency/retries/cost controls and manual handling remain. |
-| 4 One AI route | Not implemented | Central disabled config and strict contract validators tested. Direct Claude capability/region spike, rubric drafting, two bounded fresh calls and private pass-output storage remain. |
-| 5 Pilot gates | Not performed | 45 role-specific fixtures, 30 held out, human labels, 20 adversarial pairs, repeatability, identity minimisation, essential cases, fault/deletion/restore tests, broad accessibility and timed comparisons remain. |
-| 6 Customer acceptance | Not performed | Fresh independent deployment, release review/tag, restored DB+objects, training, support/incident handover and removal of developer access remain. |
+| 1 Workflow | Four steps, 100-point criteria, mandatory human review, hidden scores/ranking/names, zero-to-three shortlist, tie/essential reasons, immutable adjudication and export | Independent recruiter completes a batch without help |
+| 2 Ownership/persistence | MFA/membership/RLS, administration/invitations, pause/retention settings, rate limits, normalized relational projection, second-reviewer resume and forbidden-access tests | Dedicated hosted environment, customer-owned accounts, delivered invitations/onboarding and deployed-region checks |
+| 3 Documents/queue | Scoped private upload, signature/size validation, bounded PDF/DOCX parser and snapshot build tooling, stable sources, denied-network ephemeral sandbox controller, private pgmq consumer, three-attempt recovery, manual passages, atomic/idempotent completion and deletion guards | Actual managed snapshot build/run, network/DNS/canary/resource probes and uploaded-file browser exercise in hosted staging. Local parser tests are not cloud isolation proof |
+| 4 AI | Direct Anthropic SDK route via generateText/Output.object, editable unpublished criteria drafts, two fresh bounded calls, strict response/reference validation, disagreement/manual handling and private outputs | Actual API key, tested exact model identifier, successful synthetic provider spike and account/data-region approval. Mocked calls are not live model results |
+| 5 Pilot gates | 45 fictional fixtures (15 development, 30 held out), 20 clean/altered pairs, independent-label template, denominator-preserving metrics, repeated-run/timing calculators, broader accessibility/access/hostile-output tests | Recruiter-approved roles/labels/thresholds, actual model runs, semantic evidence audit, repeated/adversarial comparisons and three timed 20-CV reviews |
+| 6 Acceptance | Reproducible setup, source handover, reviewer/operations guides, local DB+private-object backup and empty-target restore with hashes and newer deletions reapplied; restored system paused | Another person deploys/operates independent accounts, customer acceptance/training/support ownership and developer-access removal |
 
-No cloud project, provider inference or production deployment was created during this build. No real CVs were parsed, assessed or stored. No keys were committed.
+Real-data activation is refused. No real CVs, cloud deployment or live inference were used. Existing cloud projects were inspected and preserved: there is no dedicated Shortlist Supabase project among them. Claude authenticated read-only advice was attempted with tools disabled; it timed out and supplied no recommendations.
 
-Repository: `/Users/ziadnasr/dev/Projects/Shortlist`. Shared Zed vault project registration is connected. Codex sidebar project registration could not be performed: Codex UI automation is blocked and available project tools do not add projects. Add this directory with Codex's Add project action; the pre-existing CV Scanning project and its input file were left untouched.
-
-See `validation.md` for final actual check results and limits, and `customer-decisions.md` for required customer input before real data.
+Repository remains `/Users/ziadnasr/dev/Projects/Shortlist`. The original CV Scanning input directory is preserved. Shared Zed vault registration is connected. Codex sidebar project registration previously could not be automated; select the repository with Add project.

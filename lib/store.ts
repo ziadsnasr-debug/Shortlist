@@ -10,6 +10,7 @@ import {
   applyAction,
   WorkflowError,
 } from "./workflow";
+import { rateLimit } from "./rate-limit";
 import { configuration } from "./config";
 import { databaseClient, sessionClient } from "./supabase";
 export type Owner = {
@@ -109,6 +110,7 @@ export async function readState(access: Owner): Promise<Workspace> {
   return data.payload;
 }
 export async function mutate(access: Owner, version: number, action: Action) {
+  if (!access.local) await rateLimit(access.actor, "workspace-write", 100, 60);
   return exclusive(access.workspaceId, async () => {
     const state = await readState(access);
     if (state.version !== version)

@@ -13,7 +13,10 @@ export function configuration() {
     mode,
     appUrl: process.env.APP_URL,
     ai: {
-      enabled: false,
+      enabled:
+        process.env.AI_ENABLED === "true" &&
+        !!process.env.ANTHROPIC_API_KEY &&
+        !!process.env.AI_MODEL_ID,
       provider: "anthropic",
       model: process.env.AI_MODEL_ID ?? null,
       promptVersion: "evidence-v1",

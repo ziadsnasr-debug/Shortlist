@@ -9,3 +9,4 @@ context/zed-vault
 *.tsbuildinfo
 supabase/.temp/
 supabase/.branches/
+outputs/

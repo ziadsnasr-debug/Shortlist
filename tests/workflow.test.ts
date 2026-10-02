@@ -119,7 +119,7 @@ describe("server workflow", () => {
       view = publicState(s, true).vacancies[0].batches[0];
     expect(view.ranking).toBeNull();
     expect(view.applications[0].name).toBeUndefined();
-    expect(view.applications[0].score).toBe(92.5);
+    expect(view.applications[0].score).toBeNull();
     expect(() => ranking(batch(s))).toThrow();
   });
   it("blocks missing essential checks, source warnings and unsupported credit", () => {

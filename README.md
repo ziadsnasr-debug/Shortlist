@@ -1,55 +1,25 @@
 # Shortlist
 
-UK employer CV review POC for roughly 15–20 CVs per week. AI classifies evidence; deterministic code computes points; a recruiter reviews every active application and chooses zero to three candidates.
+UK employer CV evidence-review POC, built from Version 1.2 (2 October 2026) and companion prototype in docs/inputs. Next.js, React, TypeScript, Tailwind/shadcn, Supabase and a managed TypeScript parser. Synthetic data only; real-data activation is refused.
 
-**Synthetic only. Real uploads and inference are disabled.** Stage 1 workflow is implemented. Stage 2 persistence/ownership foundation is implemented and verified against local Supabase. Stages 3–6 remain gated.
+Criteria → Add CVs → Review → Shortlist. Configurable published 100-point rubric; AI classifies evidence only; deterministic half-point scoring; every active CV human-reviewed; ranking/names hidden until reviews complete; zero-to-three selection; tie/essential reasons; no reopening finalised decisions. Authorized content deletion is separate from adjudication.
 
-## Run locally
+## Local workflow
 
-Use Node.js 22 or newer and npm. No provider credentials required for local synthetic mode.
+Node 22+; `npm ci`, `npm run dev -- --port 3218`; open http://127.0.0.1:3218. No cloud keys needed for six fictional sample CVs. Local server-only JSON is a synthetic demonstration, not production ownership.
 
-```sh
-npm ci
-npm run dev
-```
+## Checks and tooling
 
-Open http://127.0.0.1:3000. Publish the example criteria, add six fictional CVs, close intake, review each CV, resolve the disagreement and source flag, select candidates, explain any boundary tie and finalise. `Save criteria draft` saves edits before publication. Individual checks are required for essentials, disputed results and changes. No batch approval exists.
+`npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e`. With isolated local Supabase running, `npm run test:integration` creates/cleans disposable fictional users and tests ownership, queue/deletion and actual object/database restore. Never point that harness at cloud data.
 
-The local demonstration persists synthetic workspace state on the server under ignored `work/synthetic-state/`, keyed by an opaque HTTP-only cookie. It supports one local Node process. It is not a distributed storage solution and is refused on Vercel. No CVs or keys are kept in browser local storage.
+`npm run parser:build` creates dependency-only bundle/hash. `npm run parser:snapshot` requires the intended authenticated Vercel project and executes isolation probes. `npm run provider:spike` requires an approved direct API key/exact model and fictional data. Neither cloud capability has been verified here.
 
-## Checks
+`npm run evaluation` generates 45 fixtures/20 pairs and label template under ignored outputs/evaluation. `npm run evaluation -- <independent-labelled-results.json>` computes metrics, not full release approval.
 
-```sh
-npm test
-npm run typecheck
-npm run lint
-npm run build
-npx playwright install chromium
-npm run test:e2e
-```
+`npm run backup`, `npm run ledger:export` and `npm run restore` support protected synthetic-only recovery; read deployment guide before use.
 
-For local Supabase integration, Docker and the Supabase CLI are required:
+## Handover
 
-```sh
-supabase start
-npm run test:integration
-```
+See docs/status.md for stage exits; docs/deployment.md for fresh accounts/environment/migrations/snapshot/cron/recovery; docs/environment.md for variable inventory; docs/architecture.md; docs/security.md (mandatory SEC01–SEC12); docs/validation.md; docs/customer-decisions.md; docs/reviewer-guide.md. Lockfile and license inventory accompany source. No provider account identifiers or secrets are embedded.
 
-The integration harness reads local CLI credentials into process memory only, creates disposable synthetic users, tests MFA and ownership, starts a temporary production server and cleans up its own fixtures. It refuses a remote Supabase URL. It never prints keys, passwords or auth responses. Normal CLI status may display local keys: do not paste it into reports or logs.
-
-## Canonical inputs
-
-`docs/inputs/Technical_Specification.docx` is **Version 1.2, 2 October 2026**, with mandatory Appendix A. Both matching `(1)` and `(2)` downloads have identical extracted text. The local unsuffixed download was Version 1.0 and was not used. `docs/inputs/Interface_Prototype.html` is the supplied four-step companion. Inputs are reference material, not running application code. [Provenance](docs/specification.md) records hashes and source boundaries.
-
-## Ownership and handover
-
-Use separate local, synthetic staging and future production projects. Accounts and billing ultimately belong to the customer. No account, domain, project UUID or model identifier is hardcoded. Generic bucket and queue names describe application resources, not vendor accounts.
-
-- [Architecture and persistence boundaries](docs/architecture.md)
-- [Environment variables](docs/environment.md)
-- [Fresh deployment and handover](docs/deployment.md)
-- [Six-stage plan and remaining work](docs/status.md)
-- [Mandatory security controls and real-data gate](docs/security.md)
-- [Customer decisions](docs/customer-decisions.md)
-
-Source is provided for review. Code ownership and support terms remain to be agreed; this repository declares `UNLICENSED`, not an unsolicited open-source grant. Dependency license inventory is recorded separately before customer acceptance.
+Local tests do not establish hosted isolation, model accuracy, human usefulness or customer acceptance. These external gates remain required before real CVs.

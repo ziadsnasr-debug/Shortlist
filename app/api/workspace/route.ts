@@ -1,3 +1,4 @@
+import { readBoundedText } from "@/lib/http";
 import { validOrigin } from "@/lib/origin";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -58,6 +59,12 @@ export async function GET(req: NextRequest) {
         ),
         role: access.role,
         mode: access.local ? "Local synthetic" : "Supabase synthetic",
+        capabilities: {
+          uploads: !access.local && !!process.env.PARSER_SNAPSHOT_ID,
+          ai:
+            process.env.AI_ENABLED === "true" &&
+            !!process.env.ANTHROPIC_API_KEY,
+        },
       },
       { headers },
     );
@@ -71,7 +78,7 @@ export async function POST(req: NextRequest) {
       throw new WorkflowError("Request origin denied.", 403);
     if (Number(req.headers.get("content-length") ?? 0) > 200000)
       throw new WorkflowError("Request too large.", 413);
-    const text = await req.text();
+    const text = await readBoundedText(req, 200000);
     if (text.length > 200000)
       throw new WorkflowError("Request too large.", 413);
     const body = z
@@ -85,6 +92,12 @@ export async function POST(req: NextRequest) {
         ...publicState(state),
         role: access.role,
         mode: access.local ? "Local synthetic" : "Supabase synthetic",
+        capabilities: {
+          uploads: !access.local && !!process.env.PARSER_SNAPSHOT_ID,
+          ai:
+            process.env.AI_ENABLED === "true" &&
+            !!process.env.ANTHROPIC_API_KEY,
+        },
       },
       { headers },
     );

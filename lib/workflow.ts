@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { minimise } from "./minimisation";
 
 export const Category = z.enum(["FULL", "PARTIAL", "NOT_EVIDENCED", "UNCLEAR"]);
 export type Category = z.infer<typeof Category>;
@@ -25,6 +26,8 @@ export type Block = {
   text: string;
   locator: string;
   documentVersion: number;
+  assessmentText?: string;
+  inputMethod?: "parsed" | "manual";
 };
 export type Assessment = {
   category: Category;
@@ -39,7 +42,7 @@ export type Application = {
   id: string;
   name: string;
   file: string;
-  state: "ready" | "readable_copy" | "disposed";
+  state: "ready" | "readable_copy" | "disposed" | "processing" | "attention";
   disposition?: string;
   dispositionReason?: string;
   documentVersion: number;
@@ -278,6 +281,27 @@ export const Action = z.discriminatedUnion("type", [
       reason: z.string().trim().min(1).max(1000),
     })
     .strict(),
+  z
+    .object({
+      ...base,
+      type: z.literal("manual_source"),
+      applicationId: id,
+      name: z.string().trim().max(100),
+      passages: z
+        .array(
+          z
+            .object({
+              locator: z.string().trim().min(1).max(100),
+              text: z.string().trim().min(1).max(10000),
+            })
+            .strict(),
+        )
+        .min(1)
+        .max(30),
+      reason: z.string().trim().min(1).max(1000),
+      attest: z.literal(true),
+    })
+    .strict(),
   z.object({ ...base, type: z.literal("close") }).strict(),
   z
     .object({
@@ -383,7 +407,9 @@ export function applyAction(
           !batch.applications.length,
           "Sample documents already added.",
         );
-        batch.applications = samples(batch.rubric, batch.rubricVersion);
+        batch.applications = samples(batch.rubric, batch.rubricVersion).map(
+          (a) => (batch.id === "first-batch" ? a : { ...a, id: makeId() }),
+        );
         break;
       case "dispose": {
         requireRule(
@@ -400,13 +426,70 @@ export function applyAction(
         app.confirmed = false;
         break;
       }
+      case "manual_source": {
+        requireRule(
+          !batch.closed,
+          "Manual passages must be checked before intake closes.",
+        );
+        const app = batch.applications.find(
+          (a) => a.id === action.applicationId,
+        );
+        requireRule(
+          app &&
+            ["readable_copy", "attention", "processing"].includes(app.state),
+          "Manual handling unavailable.",
+        );
+        requireRule(
+          action.passages.reduce((n, p) => n + p.text.length, 0) <= 100000,
+          "Manual text limit exceeded.",
+        );
+        app.documentVersion++;
+        app.runId = makeId();
+        app.name = action.name;
+        app.state = "ready";
+        app.confirmed = false;
+        app.sourceChecked = false;
+        app.blocks = action.passages.map((p, i) => ({
+          id: `M_B${i + 1}`,
+          locator: `Checked manual passage: ${p.locator}`,
+          text: p.text,
+          assessmentText: minimise(p.text, [action.name]),
+          documentVersion: app.documentVersion,
+          inputMethod: "manual",
+        }));
+        app.sourceFlag =
+          "Manually transcribed passages: inspect against original. " +
+          action.reason;
+        app.assessments = Object.fromEntries(
+          batch.rubric.map((c) => [
+            c.id,
+            {
+              category: "UNCLEAR",
+              initial: "UNCLEAR",
+              evidence: [],
+              rationale:
+                "Manual handling requires your judgement and source evidence.",
+              flagged: true,
+              checked: false,
+              reason: "",
+            },
+          ]),
+        );
+        batch.selected = [];
+        batch.reason = "";
+        batch.tieReason = "";
+        batch.exceptions = {};
+        break;
+      }
       case "close":
         requireRule(
           batch.published && !batch.closed && batch.applications.length,
           "Publish criteria and add CVs before closing intake.",
         );
         requireRule(
-          batch.applications.every((a) => a.state !== "readable_copy"),
+          batch.applications.every(
+            (a) => a.state === "ready" || a.state === "disposed",
+          ),
           "Account for unreadable files before closing intake.",
         );
         batch.closed = true;
@@ -583,10 +666,26 @@ export function publicState(state: Workspace, reveal = false) {
       batches: v.batches.map((b) => ({
         ...b,
         ranking: allReviewed(b) ? ranking(b) : null,
+        snapshot: b.snapshot
+          ? {
+              ...b.snapshot,
+              applications: b.snapshot.applications.map((a) => ({
+                ...a,
+                blocks: a.blocks.map((block) => ({
+                  ...block,
+                  text: block.assessmentText ?? block.text,
+                })),
+              })),
+            }
+          : undefined,
         applications: b.applications.map((a) => ({
           ...a,
+          blocks: a.blocks.map((block) => ({
+            ...block,
+            text: block.assessmentText ?? block.text,
+          })),
           name: reveal && allReviewed(b) ? a.name : undefined,
-          score: score(b, a),
+          score: allReviewed(b) ? score(b, a) : null,
           blockers: reviewBlockers(b, a),
         })),
       })),
