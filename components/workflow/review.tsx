@@ -15,6 +15,7 @@ export function Review({
   onDirty,
   candidate,
   onCandidate,
+  onIntake,
 }: {
   vacancy: PublicVacancy;
   batch: PublicBatch;
@@ -23,6 +24,7 @@ export function Review({
   onNext: () => void;
   onDirty: (v: boolean) => void;
   candidate?: number;
+  onIntake: () => void;
   // `force` only after a successful save; queue clicks keep the draft guard.
   onCandidate: (n: number, force?: boolean) => void;
 }) {
@@ -48,7 +50,12 @@ export function Review({
 
   if (!batch.closed)
     return (
-      <Notice>Close intake in Add CVs before reviewing applications.</Notice>
+      <>
+        <Notice>Close intake in Add CVs before reviewing applications.</Notice>
+        <Button className="mt-4" variant="outline" onClick={onIntake}>
+          Go to Add CVs
+        </Button>
+      </>
     );
   if (!app)
     return (

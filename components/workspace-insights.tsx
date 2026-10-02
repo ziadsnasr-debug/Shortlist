@@ -1,12 +1,5 @@
 import { type CSSProperties } from "react";
-import {
-  BarChart3,
-  Check,
-  CheckCheck,
-  Files,
-  ShieldCheck,
-  TriangleAlert,
-} from "lucide-react";
+import { BarChart3, Check, TriangleAlert } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -134,61 +127,6 @@ export function WeightChart({
           </li>
         ))}
       </ul>
-    </section>
-  );
-}
-
-export function BatchProgress({
-  applications,
-}: {
-  applications: Pick<Application, "state" | "confirmed">[];
-}) {
-  const active = applications.filter((a) => a.state !== "disposed");
-  const reviewed = active.filter((a) => a.confirmed).length;
-  const attention = active.filter((a) =>
-    ["readable_copy", "attention"].includes(a.state),
-  ).length;
-  return (
-    <section className="batch-progress" aria-label="Batch progress">
-      <div>
-        <Files aria-hidden="true" />
-        <span>
-          <strong>{active.length}</strong> active applications
-        </span>
-      </div>
-      <div>
-        <CheckCheck aria-hidden="true" />
-        <span>
-          <strong>{reviewed}</strong> reviewed
-        </span>
-      </div>
-      <div>
-        <ShieldCheck aria-hidden="true" />
-        <span>
-          {attention ? (
-            <>
-              <strong>{attention}</strong> need attention
-            </>
-          ) : (
-            "Human review at every step"
-          )}
-        </span>
-      </div>
-      <div
-        className="progress-track"
-        role="progressbar"
-        aria-label="Applications reviewed"
-        aria-valuemin={0}
-        aria-valuemax={active.length || 1}
-        aria-valuenow={reviewed}
-        aria-valuetext={`${reviewed} of ${active.length} active applications reviewed`}
-      >
-        <span
-          style={{
-            transform: `scaleX(${active.length ? reviewed / active.length : 0})`,
-          }}
-        />
-      </div>
     </section>
   );
 }

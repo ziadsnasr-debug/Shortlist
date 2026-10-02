@@ -142,3 +142,45 @@ test("the command menu jumps to steps and respects unsaved drafts", async ({
     page.getByText("Save your draft before leaving this step.").first(),
   ).toBeVisible();
 });
+
+test("tablet widths use an icon rail that keeps every name", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 900, height: 800 });
+  await page.goto("/vacancies");
+  const rail = page.locator("aside.sidebar");
+  expect((await rail.boundingBox())!.width).toBeLessThanOrEqual(80);
+  const nav = rail.getByRole("navigation", { name: "Main navigation" });
+  await expect(nav.getByRole("link", { name: "Vacancies" })).toBeVisible();
+  await expect(rail.getByRole("button", { name: /Jump to/ })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("saving says what happened", async ({ page }) => {
+  await page.goto("/vacancies/customer-success/first-batch/criteria");
+  await page
+    .getByRole("button", { name: "Publish criteria", exact: true })
+    .first()
+    .click();
+  const dialog = page.getByRole("dialog");
+  if (await dialog.isVisible().catch(() => false))
+    await dialog
+      .getByRole("button", { name: "Publish criteria", exact: true })
+      .click();
+  await expect(page.getByText("Criteria published")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Add sample CVs", exact: true })
+    .click();
+  await expect(page.getByText("Six sample CVs added")).toBeVisible();
+});
+
+test("blocked steps offer the way forward", async ({ page }) => {
+  await page.goto("/vacancies/customer-success/first-batch/review");
+  await page.getByRole("button", { name: "Go to Add CVs" }).click();
+  await expect(page).toHaveURL(/\/cvs$/);
+});

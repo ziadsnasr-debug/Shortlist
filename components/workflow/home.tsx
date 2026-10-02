@@ -1,7 +1,6 @@
 "use client";
 import { ArrowRight, BriefcaseBusiness, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BatchProgress } from "../workspace-insights";
 import { NavLink, type Navigate } from "./nav-link";
 import { batchSummary, nextAction } from "./progress";
 import { pathFor } from "./routes";
@@ -34,13 +33,6 @@ export function VacanciesHome({
           </Button>
         )}
       </header>
-      {vacancies.length > 0 && (
-        <BatchProgress
-          applications={vacancies.flatMap(
-            (v) => v.batches.at(-1)?.applications ?? [],
-          )}
-        />
-      )}
       {vacancies.length === 0 ? (
         <section className="panel empty">
           <BriefcaseBusiness aria-hidden="true" />
@@ -94,9 +86,11 @@ export function VacanciesHome({
                     ))}
                   </ol>
                   <span className="tabular-nums">
-                    {s.active.length
-                      ? `${s.reviewed} of ${s.active.length} reviewed`
-                      : "No CVs yet"}
+                    {batch.snapshot
+                      ? `Finalised · ${batch.selected.length} shortlisted`
+                      : s.active.length
+                        ? `${s.reviewed} of ${s.active.length} reviewed`
+                        : "No CVs yet"}
                   </span>
                 </div>
                 <Button variant="outline" asChild>

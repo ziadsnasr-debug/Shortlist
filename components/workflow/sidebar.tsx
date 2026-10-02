@@ -91,8 +91,8 @@ function SidebarNav({
         }}
       >
         <Search aria-hidden="true" />
-        Jump to
-        <Kbd className="ml-auto">⌘K</Kbd>
+        <span className="side-label">Jump to</span>
+        <Kbd className="ml-auto side-label">⌘K</Kbd>
       </button>
       <nav aria-label="Main navigation" className="side-nav">
         <NavLink
@@ -100,7 +100,8 @@ function SidebarNav({
           navigate={go}
           aria-current={route.view === "home" ? "page" : undefined}
         >
-          <BriefcaseBusiness aria-hidden="true" /> Vacancies
+          <BriefcaseBusiness aria-hidden="true" />
+          <span className="side-label">Vacancies</span>
         </NavLink>
         {isAdmin && (
           <NavLink
@@ -108,7 +109,8 @@ function SidebarNav({
             navigate={go}
             aria-current={route.view === "new" ? "page" : undefined}
           >
-            <Plus aria-hidden="true" /> New vacancy
+            <Plus aria-hidden="true" />
+            <span className="side-label">New vacancy</span>
           </NavLink>
         )}
       </nav>
@@ -137,7 +139,9 @@ function SidebarNav({
                     <ProgressRing
                       value={s.done.filter(Boolean).length / s.done.length}
                     />
-                    <span>{v.title}</span>
+                    <span className="side-label" title={v.title}>
+                      {v.title}
+                    </span>
                   </NavLink>
                 </li>
               );
@@ -225,7 +229,8 @@ export function Sidebar(props: SidebarProps) {
           }}
           aria-current={props.route.view === "admin" ? "page" : undefined}
         >
-          <Settings2 aria-hidden="true" /> Administration
+          <Settings2 aria-hidden="true" />
+          <span className="side-label">Administration</span>
         </NavLink>
       )}
       <AccountMenu {...props} />
