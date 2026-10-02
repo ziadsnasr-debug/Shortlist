@@ -8,11 +8,19 @@ Criteria → Add CVs → Review → Shortlist. Configurable published 100-point 
 
 Node 22+; `npm ci`, `npm run dev -- --port 3218`; open http://127.0.0.1:3218. No cloud keys needed for six fictional sample CVs. Local server-only JSON is a synthetic demonstration, not production ownership.
 
+## Persistent local app
+
+Start isolated local Supabase using `supabase start`, then `npm run local:setup`. This writes ignored owner credentials and `.env.local` with local-only database keys; keep those files private. Put your OpenAI key in `.env.local` under `OPENAI_API_KEY`, select the tested exact model with `AI_MODEL_ID`, and enable `AI_ENABLED=true` only for fictional testing. Enrol the local owner using `npm run local:authenticator`.
+
+Link your own Vercel project, pull its development OIDC into ignored `.env.vercel-auth.local`, build/create the parser snapshot and pin its metadata in `.env.local`. Run `npm run build` then `npm run local:start`. Originals stay in your local folder; uploads are private local Supabase copies, temporarily parsed in Vercel. OpenAI receives minimised text. Review every CV before selecting up to three suggestions.
+
+The dedicated Vercel project is prepared; the working persistent app runs locally because the backend is local; a separate hosted preview has no connected backend. Fresh hosted deployment requires a separately authorized backend. See `docs/deployment.md`.
+
 ## Checks and tooling
 
 `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e`. With isolated local Supabase running, `npm run test:integration` creates/cleans disposable fictional users and tests ownership, queue/deletion and actual object/database restore. Never point that harness at cloud data.
 
-`npm run parser:build` creates dependency-only bundle/hash. `npm run parser:snapshot` requires the intended authenticated Vercel project and executes isolation probes. `npm run provider:spike` requires an approved direct API key/exact model and fictional data. Neither cloud capability has been verified here.
+`npm run parser:build` creates dependency-only bundle/hash. `npm run parser:snapshot` requires the intended authenticated Vercel project and executes isolation probes. `npm run provider:spike` requires an approved direct API key/exact model and fictional data. Actual parser isolation probes and the live OpenAI two-pass synthetic spike passed; semantic accuracy and customer acceptance remain pending.
 
 `npm run evaluation` generates 45 fixtures/20 pairs and label template under ignored outputs/evaluation. `npm run evaluation -- <independent-labelled-results.json>` computes metrics, not full release approval.
 

@@ -3,14 +3,14 @@
   "reviewState": "Inventory only; no legal review or customer acceptance claimed.",
   "packages": [
     {
-      "packagePath": "node_modules/@ai-sdk/anthropic",
-      "version": "4.0.71",
+      "packagePath": "node_modules/@ai-sdk/gateway",
+      "version": "4.0.103",
       "license": "Apache-2.0",
       "development": false
     },
     {
-      "packagePath": "node_modules/@ai-sdk/gateway",
-      "version": "4.0.103",
+      "packagePath": "node_modules/@ai-sdk/openai",
+      "version": "4.0.83",
       "license": "Apache-2.0",
       "development": false
     },

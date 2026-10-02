@@ -17,15 +17,15 @@ const manifest = {
   specification: "1.2 / 2026-10-02",
   data: "synthetic only",
   defaultAiEnabled: false,
-  evidencePromptVersion: "evidence-v1",
+  evidencePromptVersion: "evidence-v2-openai",
   extractionVersion: "extract-v1",
   parserBundle: existsSync("work/parser/manifest.json")
     ? JSON.parse(readFileSync("work/parser/manifest.json", "utf8"))
     : null,
   activation:
-    "Synthetic implementation; hosted, model and human exit gates pending",
-  parserSnapshot: null,
-  providerModel: null,
+    "Local synthetic implementation; managed parser and live provider probes passed; hosted app and human acceptance pending",
+  parserSnapshot: "Configured privately per deployment; actual London synthetic probes passed",
+  providerModel: "gpt-6-luna (live synthetic two-pass spike verified)",
 };
 mkdirSync("docs", { recursive: true });
 writeFileSync(
