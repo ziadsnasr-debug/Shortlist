@@ -18,7 +18,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { type Batch, highest } from "@/lib/workflow";
+import { type Batch, highest } from "@/lib/rules";
 import { EvidenceComparison } from "../workspace-insights";
 import { Panel } from "./common";
 import {

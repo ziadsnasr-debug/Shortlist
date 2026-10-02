@@ -61,3 +61,12 @@ The mark is three rounded bars of decreasing length, the top one in the accent (
 ## Components
 
 shadcn (new-york) on Radix in `components/ui/`. Every interactive component defines default, hover, focus-visible, active, disabled, loading and error states. Focus is a 2px `--ring` outline with a 2px offset; any `outline-none` paired with a focus outline must also set `outline-solid` (Tailwind v4). Status chips always pair an icon with text. The local design gallery at `/design` (local synthetic mode only) shows every primitive in every state.
+
+## Patterns in use
+
+- Routing: every page and step has an address (`components/workflow/routes.ts`); in-app moves use `history.pushState` through one `navigate` with an unsaved-draft guard.
+- Command menu: ⌘K or Ctrl+K opens "Jump to" (cmdk) for vacancies, steps, CVs, theme and help.
+- Processing glyph: `components/workflow/processing.tsx`. Stages are only those the queue reports.
+- Review: three zones, compact agreed rows, "Check required" rows, evidence chosen in the source, sticky action bar that states blockers, shortcuts paused while typing.
+- Results: score composition bars with a cut line and tie chips, a table view as the spec fallback, contextual tie and exception fields, confirmation before finalising, a one-time finish mark.
+- Lessons from testing: never change layout on pointer-down; entrance motion slides without fading so Axe and readers see full contrast; screen-reader-only text inside a horizontal scroller needs a positioned container.

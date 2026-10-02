@@ -117,3 +117,28 @@ test("theme can be chosen from the account menu", async ({ page }) => {
   await expect(page.getByRole("menu")).toHaveCount(0);
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("the command menu jumps to steps and respects unsaved drafts", async ({
+  page,
+}) => {
+  await page.goto("/vacancies/customer-success/first-batch/criteria");
+  await page.keyboard.press("ControlOrMeta+k");
+  const menu = page.getByRole("dialog", { name: "Jump to" });
+  await expect(menu).toBeVisible();
+  await menu.getByRole("combobox").fill("Add CVs");
+  await page.keyboard.press("Enter");
+  await expect(menu).toBeHidden();
+  await expect(page).toHaveURL(/\/cvs$/);
+  await page.getByRole("button", { name: /Jump to/ }).click();
+  await menu.getByRole("combobox").fill("Criteria");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/criteria$/);
+  await page.getByLabel("Points", { exact: true }).first().fill("9");
+  await page.keyboard.press("ControlOrMeta+k");
+  await menu.getByRole("combobox").fill("Vacancies");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/criteria$/);
+  await expect(
+    page.getByText("Save your draft before leaving this step.").first(),
+  ).toBeVisible();
+});
