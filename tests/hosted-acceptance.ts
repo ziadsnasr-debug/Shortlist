@@ -95,8 +95,9 @@ await writeFile(
   ),
 );
 const publicPilot = process.env.HOSTED_EXPECT_TEMPORARY_PUBLIC === "true";
+const publicExpiry = Date.parse(process.env.TEMP_PUBLIC_ACCESS_UNTIL ?? "");
 if (publicPilot && (process.env.TEMP_PUBLIC_ACCESS !== "true" ||
-    Date.parse(process.env.TEMP_PUBLIC_ACCESS_UNTIL ?? "") <= Date.now()))
+    !Number.isFinite(publicExpiry) || publicExpiry <= Date.now()))
   throw new Error("Active temporary public pilot configuration required.");
 try {
   const created = await db.auth.admin.createUser({
@@ -403,7 +404,7 @@ try {
   expect(fits).toBe(true);
   await page.screenshot({ path: "work/hosted-acceptance-final.png" });
   console.log(
-    `PASS: hosted real MFA login, browser PDF/DOCX uploads, managed parser/queue, six source blocks each, hidden ranking/scores, manual full-evidence review, two scores of 100, immutable finalisation/export/reload, Axe review and 390px bounds. Provider configuration is recorded in private assessment runs; no real CV used.`,
+    `PASS: hosted ${publicPilot ? "temporary fictional public access (browser MFA not assessed)" : "real MFA login"}, browser PDF/DOCX uploads, managed parser/queue, six source blocks each, hidden ranking/scores, manual full-evidence review, two scores of 100, immutable finalisation/export/reload, Axe review and 390px bounds. Provider configuration is recorded in private assessment runs; no real CV used.`,
   );
 } catch {
   if (diagnostics.length)
