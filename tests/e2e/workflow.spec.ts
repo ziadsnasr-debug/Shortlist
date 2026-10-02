@@ -106,22 +106,33 @@ test("complete synthetic batch, tie gate, immutable export", async ({
   await page
     .getByLabel("Selection reason (required, including an empty shortlist)")
     .fill("Selected the strongest confirmed evidence for this synthetic role.");
-  await page
-    .getByRole("button", { name: "Finalise shortlist", exact: true })
-    .click();
+  const finalise = page.getByRole("button", {
+    name: "Finalise shortlist",
+    exact: true,
+  });
+  // The tie rule is stated before finalising is possible.
   await expect(
     page.getByText("Record a human decision for the boundary tie.", {
       exact: true,
     }),
   ).toBeVisible();
+  await expect(finalise).toBeDisabled();
   await page
     .getByLabel("Boundary tie decision", { exact: true })
     .fill(
       "Reviewed tied sources and chose Candidate 03 based on reporting evidence.",
     );
-  await page
+  await finalise.click();
+  const confirm = page.getByRole("dialog", {
+    name: "Finalise this shortlist?",
+  });
+  await expect(confirm.locator("dd").first()).toContainText("Candidate 03");
+  await confirm
     .getByRole("button", { name: "Finalise shortlist", exact: true })
     .click();
+  await expect(
+    page.getByRole("heading", { name: "Shortlist finalised" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Finalised shortlist", exact: true }),
   ).toBeVisible();

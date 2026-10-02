@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Check, ListChecks, Plus } from "lucide-react";
-import { toast } from "sonner";
+import { Download, Eye, EyeOff, ListChecks, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,9 +19,19 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { type Batch, highest } from "@/lib/workflow";
-import { ScoreBar, EvidenceComparison } from "../workspace-insights";
-import { Notice, Panel } from "./common";
+import { EvidenceComparison } from "../workspace-insights";
+import { Panel } from "./common";
+import {
+  FinishMark,
+  ScoreChart,
+  ScoreTable,
+  cutTie,
+  points,
+  tieAtSelection,
+  type RankRow,
+} from "./results";
 import type { PublicBatch, PublicVacancy, Send } from "./types";
+
 export function Shortlist({
   vacancy,
   batch,
@@ -52,84 +61,192 @@ export function Shortlist({
     [reason, setReason] = useState(batch.reason),
     [tieReason, setTieReason] = useState(batch.tieReason),
     [exceptions, setExceptions] = useState(batch.exceptions),
+    [view, setView] = useState<"chart" | "table">("chart"),
+    [message, setMessage] = useState(""),
+    [confirming, setConfirming] = useState(false),
+    [justFinalised, setJustFinalised] = useState(false),
     [nextDialog, setNextDialog] = useState(false);
-  if (!batch.ranking)
+
+  if (!batch.ranking) {
+    const active = batch.applications.filter((a) => a.state !== "disposed");
+    const left = active.filter((a) => !a.confirmed).length;
     return (
       <Panel>
         <div className="empty">
           <ListChecks aria-hidden="true" />
           <h2>Review every CV first</h2>
           <p>
-            Comparative ranking appears only after intake closes and every
-            active application has a resolved human review.
+            {batch.closed && left
+              ? `Ranking appears after all ${active.length} CVs are reviewed. ${left} remaining.`
+              : "Comparative ranking appears only after intake closes and every active application has a resolved human review."}
           </p>
         </div>
       </Panel>
     );
+  }
+
+  const ranking: RankRow[] = batch.ranking;
+  const locked = !!batch.snapshot;
+  const tie = cutTie(ranking);
+  const needsTie = tieAtSelection(ranking, selected);
+  const missingExceptions = ranking.filter(
+    (r) =>
+      selected.includes(r.id) &&
+      r.essentials.length > 0 &&
+      !exceptions[r.id]?.trim(),
+  );
+  const label = (id: string) => {
+    const app = batch.applications.find((a) => a.id === id)!;
+    return reveal && app.name ? app.name : app.label;
+  };
+  // Mirrors the server's finalise rules so the reason shows before trying.
+  const blocked = !reason.trim()
+    ? "Record a written selection reason, including when selecting nobody."
+    : needsTie && !tieReason.trim()
+      ? "Record a human decision for the boundary tie."
+      : missingExceptions.length
+        ? "Document an exception for each selected applicant with unmet essentials."
+        : null;
+  const scores = ranking.map((r) => r.score);
+  const summary = ranking.length
+    ? `${ranking.length} CV${ranking.length === 1 ? "" : "s"} reviewed. Confirmed scores range from ${points(Math.min(...scores))} to ${points(Math.max(...scores))}.${tie !== null ? ` ${ranking.filter((r) => r.score === tie).length} CVs tie at ${points(tie)} across the cut after third place.` : ""}`
+    : "No active CVs. You may finalise an empty shortlist with a reason.";
+
+  const toggle = (id: string, on: boolean) => {
+    setDirty(true);
+    setMessage("");
+    setSelected(on ? [...selected, id] : selected.filter((x) => x !== id));
+  };
+
+  async function finalise() {
+    const result = await send({
+      type: "selection",
+      vacancyId: vacancy.id,
+      batchId: batch.id,
+      selected,
+      reason,
+      tieReason,
+      exceptions,
+    });
+    if (!result) return;
+    setDirty(false);
+    const done = await send(
+      { type: "finalise", vacancyId: vacancy.id, batchId: batch.id },
+      result.version,
+    );
+    if (done) {
+      setConfirming(false);
+      setJustFinalised(true);
+    }
+  }
+
   return (
     <>
       <div className="sectionhead">
         <div>
-          <h2>
-            {batch.snapshot ? "Finalised shortlist" : "Choose your shortlist"}
-          </h2>
+          <h2>{locked ? "Finalised shortlist" : "Choose your shortlist"}</h2>
           <p>
-            Choose zero to three. Scores support your decision; essentials
-            remain separate.
+            Choose zero to three. Scores support your decision; essentials stay
+            separate.
           </p>
         </div>
         <Button variant="outline" onClick={onReveal}>
+          {reveal ? (
+            <EyeOff data-icon="inline-start" />
+          ) : (
+            <Eye data-icon="inline-start" />
+          )}
           {reveal ? "Hide names" : "Reveal names"}
         </Button>
       </div>
-      {batch.snapshot && (
-        <Notice>
-          Finalised{" "}
-          {new Date(batch.snapshot.at).toLocaleString("en-GB", {
-            timeZone: "Europe/London",
-          })}
-          . Decisions and batch membership are frozen.
-        </Notice>
+      {locked && (
+        <section className="finish-receipt" aria-labelledby="finish-title">
+          <FinishMark play={justFinalised} />
+          <div>
+            <h3 id="finish-title">Shortlist finalised</h3>
+            <p>
+              {new Date(batch.snapshot!.at).toLocaleString("en-GB", {
+                timeZone: "Europe/London",
+                dateStyle: "long",
+                timeStyle: "short",
+              })}
+              . Decisions and batch membership are frozen. The export reads this
+              snapshot and leaves names out.
+            </p>
+            <div className="actions mt-3">
+              <Button variant="outline" asChild>
+                <a
+                  href={`/api/workspace?vacancy=${vacancy.id}&export=${batch.id}`}
+                >
+                  <Download data-icon="inline-start" />
+                  Export review CSV
+                </a>
+              </Button>
+              {canStartNext && (
+                <Button onClick={() => setNextDialog(true)}>
+                  Start next batch
+                  <Plus data-icon="inline-end" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </section>
       )}
-      <Panel>
-        {batch.ranking.map((row) => {
-          const app = batch.applications.find((a) => a.id === row.id)!;
-          return (
-            <div className="rank-row" key={row.id}>
-              <input
-                aria-label={`Select ${app.label}`}
-                type="checkbox"
-                checked={selected.includes(row.id)}
-                disabled={
-                  busy ||
-                  !!batch.snapshot ||
-                  (!selected.includes(row.id) && selected.length === 3)
-                }
-                onChange={(e) => {
-                  setDirty(true);
-                  setSelected(
-                    e.target.checked
-                      ? [...selected, row.id]
-                      : selected.filter((id) => id !== row.id),
-                  );
-                }}
-              />
-              <div>
-                <h3>{reveal ? app.name : app.label}</h3>
-                <ScoreBar score={row.score} />
-                <p>
-                  {row.essentials.length
-                    ? `Essential requirements not fully evidenced: ${row.essentials.join(", ")}`
-                    : "All essential requirements fully evidenced"}
-                </p>
-                {selected.includes(row.id) && row.essentials.length > 0 && (
-                  <Field className="mt-3">
+      <section className="results panel" aria-labelledby="results-title">
+        <div className="results-head">
+          <div>
+            <h3 id="results-title">Confirmed scores</h3>
+            <p className="summary-line">{summary}</p>
+          </div>
+          <div className="view-toggle" role="group" aria-label="View">
+            <button
+              type="button"
+              aria-pressed={view === "chart"}
+              onClick={() => setView("chart")}
+            >
+              Chart
+            </button>
+            <button
+              type="button"
+              aria-pressed={view === "table"}
+              onClick={() => setView("table")}
+            >
+              Table
+            </button>
+          </div>
+        </div>
+        {view === "chart" ? (
+          <>
+            <div className="chart-legend" aria-hidden="true">
+              <span>
+                <i className="seg-full" /> Points from full evidence
+              </span>
+              <span>
+                <i className="seg-partial" /> Points from partial evidence
+              </span>
+              <span>
+                <i className="seg-none" /> Not earned
+              </span>
+            </div>
+            <ScoreChart
+              batch={batch}
+              ranking={ranking}
+              selected={selected}
+              reveal={reveal}
+              locked={locked}
+              busy={busy}
+              onToggle={toggle}
+              exceptionFor={(row) =>
+                selected.includes(row.id) &&
+                row.essentials.length > 0 && (
+                  <Field className="score-exception">
                     <FieldLabel htmlFor={`exception-${row.id}`}>
-                      Essential exception for {app.label}
+                      Essential exception for{" "}
+                      {batch.applications.find((a) => a.id === row.id)!.label}
                     </FieldLabel>
                     <Textarea
                       id={`exception-${row.id}`}
-                      disabled={!!batch.snapshot}
+                      disabled={locked}
                       value={exceptions[row.id] ?? ""}
                       onChange={(e) => {
                         setDirty(true);
@@ -140,47 +257,71 @@ export function Shortlist({
                       }}
                       maxLength={1000}
                     />
+                    <FieldDescription>
+                      Explain why this CV is shortlisted although{" "}
+                      {row.essentials.join(", ")}{" "}
+                      {row.essentials.length === 1 ? "is" : "are"} not fully
+                      evidenced.
+                    </FieldDescription>
                   </Field>
-                )}
-              </div>
-              <strong className="score">
-                {row.score}
-                <small>/ 100</small>
-              </strong>
-            </div>
-          );
-        })}
-        {!batch.ranking.length && (
-          <div className="empty">
-            <p>
-              No active candidates. You may finalise an empty shortlist with a
-              reason.
-            </p>
-          </div>
+                )
+              }
+            />
+          </>
+        ) : (
+          <ScoreTable
+            batch={batch}
+            ranking={ranking}
+            selected={selected}
+            reveal={reveal}
+          />
         )}
-      </Panel>
-      <EvidenceComparison
-        rubric={batch.rubric}
-        applications={batch.applications.filter((a) => selected.includes(a.id))}
-      />
-      {!batch.snapshot && (
-        <div className="actions selection-tray my-5">
-          <Button
-            variant="outline"
-            onClick={() => {
-              const b = batch as unknown as Batch;
-              setDirty(true);
-              setSelected(highest(b));
-              toast.info(
-                "Selected highest scores. Boundary ties remain for your decision.",
-              );
-            }}
-          >
-            Select highest scores
-          </Button>
-          <span>{selected.length} of 3 selected</span>
+      </section>
+      {!locked && (
+        <div className="selection-tray actions">
+          <div className="tray-text" aria-live="polite">
+            <strong>{selected.length} of 3 selected</strong>
+            {message && <span>{message}</span>}
+          </div>
+          <div className="actions">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!selected.length || busy}
+              onClick={() => {
+                setDirty(true);
+                setMessage("");
+                setSelected([]);
+              }}
+            >
+              Clear
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setDirty(true);
+                const top = highest(batch as unknown as Batch);
+                setSelected(top);
+                const msg =
+                  tie !== null && top.length < 3
+                    ? `Stopped at the tie at ${points(tie)}. Choose between the tied CVs and record why.`
+                    : "Selected the highest confirmed scores.";
+                setMessage(msg);
+              }}
+            >
+              Select highest scores
+            </Button>
+          </div>
         </div>
       )}
+      <EvidenceComparison
+        rubric={batch.rubric}
+        applications={selected.map((id) => {
+          const app = batch.applications.find((a) => a.id === id)!;
+          return { ...app, label: reveal && app.name ? app.name : app.label };
+        })}
+      />
       <Panel>
         <div className="panel-body">
           <FieldGroup>
@@ -190,7 +331,7 @@ export function Shortlist({
               </FieldLabel>
               <Textarea
                 id="selection-reason"
-                disabled={!!batch.snapshot}
+                disabled={locked}
                 value={reason}
                 onChange={(e) => {
                   setDirty(true);
@@ -203,77 +344,43 @@ export function Shortlist({
                 scores.
               </FieldDescription>
             </Field>
-            <Field>
-              <FieldLabel htmlFor="tie-reason">
-                Boundary tie decision
-              </FieldLabel>
-              <Textarea
-                id="tie-reason"
-                disabled={!!batch.snapshot}
-                value={tieReason}
-                onChange={(e) => {
-                  setDirty(true);
-                  setTieReason(e.target.value);
-                }}
-                maxLength={1000}
-              />
-              <FieldDescription>
-                Required when selected and unselected applicants share the
-                cutoff score. Arrival order is never a tie breaker.
-              </FieldDescription>
-            </Field>
+            {(needsTie || tieReason) && (
+              <Field>
+                <FieldLabel htmlFor="tie-reason">
+                  Boundary tie decision
+                </FieldLabel>
+                <Textarea
+                  id="tie-reason"
+                  disabled={locked}
+                  value={tieReason}
+                  onChange={(e) => {
+                    setDirty(true);
+                    setTieReason(e.target.value);
+                  }}
+                  maxLength={1000}
+                />
+                <FieldDescription>
+                  A selected CV shares the cutoff score with one you did not
+                  select. Arrival order is never a tie breaker.
+                </FieldDescription>
+              </Field>
+            )}
           </FieldGroup>
         </div>
       </Panel>
-      <div className="footeractions">
-        <p>
-          {batch.snapshot
-            ? "Export reads the frozen snapshot. Names are excluded."
-            : "Finalisation rechecks every application and locks this batch."}
-        </p>
-        <div className="actions">
-          {batch.snapshot ? (
-            <>
-              <Button variant="outline" asChild>
-                <a
-                  href={`/api/workspace?vacancy=${vacancy.id}&export=${batch.id}`}
-                >
-                  Export review CSV
-                </a>
-              </Button>
-              {canStartNext && (
-                <Button onClick={() => setNextDialog(true)}>
-                  Start next batch
-                  <Plus data-icon="inline-end" />
-                </Button>
-              )}
-            </>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                disabled={busy}
-                onClick={async () => {
-                  if (
-                    await send({
-                      type: "selection",
-                      vacancyId: vacancy.id,
-                      batchId: batch.id,
-                      selected,
-                      reason,
-                      tieReason,
-                      exceptions,
-                    })
-                  )
-                    setDirty(false);
-                }}
-              >
-                Save selection draft
-              </Button>
-              <Button
-                disabled={busy || !reason.trim()}
-                onClick={async () => {
-                  const result = await send({
+      {!locked && (
+        <div className="footeractions">
+          <p>
+            {blocked ??
+              "Finalising rechecks every application and freezes this batch."}
+          </p>
+          <div className="actions">
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={async () => {
+                if (
+                  await send({
                     type: "selection",
                     vacancyId: vacancy.id,
                     batchId: batch.id,
@@ -281,27 +388,72 @@ export function Shortlist({
                     reason,
                     tieReason,
                     exceptions,
-                  });
-                  if (result) {
-                    setDirty(false);
-                    await send(
-                      {
-                        type: "finalise",
-                        vacancyId: vacancy.id,
-                        batchId: batch.id,
-                      },
-                      result.version,
-                    );
-                  }
-                }}
-              >
-                Finalise shortlist
-                <Check data-icon="inline-end" />
-              </Button>
-            </>
-          )}
+                  })
+                )
+                  setDirty(false);
+              }}
+            >
+              Save selection draft
+            </Button>
+            <Button
+              disabled={busy || !!blocked}
+              onClick={() => setConfirming(true)}
+            >
+              Finalise shortlist
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
+      <Dialog open={confirming} onOpenChange={setConfirming}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Finalise this shortlist?</DialogTitle>
+            <DialogDescription>
+              Finalising freezes every decision and the batch membership. It
+              can&apos;t be reopened.
+            </DialogDescription>
+          </DialogHeader>
+          <dl className="confirm-summary">
+            <div>
+              <dt>Shortlisted</dt>
+              <dd>
+                {selected.length
+                  ? selected.map(label).join(", ")
+                  : "Nobody (empty shortlist)"}
+              </dd>
+            </div>
+            <div>
+              <dt>Reason</dt>
+              <dd>{reason}</dd>
+            </div>
+            {needsTie && (
+              <div>
+                <dt>Tie decision</dt>
+                <dd>{tieReason}</dd>
+              </div>
+            )}
+            {selected.some((id) => exceptions[id]?.trim()) && (
+              <div>
+                <dt>Essential exceptions</dt>
+                <dd>
+                  {selected
+                    .filter((id) => exceptions[id]?.trim())
+                    .map((id) => `${label(id)}: ${exceptions[id]}`)
+                    .join(" · ")}
+                </dd>
+              </div>
+            )}
+          </dl>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setConfirming(false)}>
+              Keep editing
+            </Button>
+            <Button loading={busy} onClick={() => void finalise()}>
+              Finalise shortlist
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={nextDialog} onOpenChange={setNextDialog}>
         <DialogContent>
           <DialogHeader>
