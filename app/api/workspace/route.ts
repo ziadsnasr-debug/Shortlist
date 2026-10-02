@@ -4,12 +4,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import {
   Action,
-  publicState,
   WorkflowError,
   exportBatch,
   requireRule,
 } from "@/lib/workflow";
 import { owner, readState, mutate } from "@/lib/store";
+import { workspaceView } from "@/lib/workspace-view";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store", Vary: "Cookie" };
@@ -52,19 +52,11 @@ export async function GET(req: NextRequest) {
       });
     }
     return NextResponse.json(
-      {
-        ...publicState(
-          state,
-          req.nextUrl.searchParams.get("reveal") === "true",
-        ),
-        role: access.role,
-        temporaryPublic: access.temporaryPublic ?? false,
-        mode: access.temporaryPublic ? "Temporary public synthetic" : access.local ? "Local synthetic" : "Supabase synthetic",
-        capabilities: {
-          uploads: !access.local && !!process.env.PARSER_SNAPSHOT_ID,
-          ai: process.env.AI_ENABLED === "true" && !!process.env.OPENAI_API_KEY,
-        },
-      },
+      workspaceView(
+        access,
+        state,
+        req.nextUrl.searchParams.get("reveal") === "true",
+      ),
       { headers },
     );
   } catch (e) {
@@ -86,19 +78,7 @@ export async function POST(req: NextRequest) {
       .parse(JSON.parse(text));
     const access = await owner();
     const state = await mutate(access, body.version, body.action);
-    return NextResponse.json(
-      {
-        ...publicState(state),
-        role: access.role,
-        temporaryPublic: access.temporaryPublic ?? false,
-        mode: access.temporaryPublic ? "Temporary public synthetic" : access.local ? "Local synthetic" : "Supabase synthetic",
-        capabilities: {
-          uploads: !access.local && !!process.env.PARSER_SNAPSHOT_ID,
-          ai: process.env.AI_ENABLED === "true" && !!process.env.OPENAI_API_KEY,
-        },
-      },
-      { headers },
-    );
+    return NextResponse.json(workspaceView(access, state), { headers });
   } catch (e) {
     return errorResponse(e);
   }

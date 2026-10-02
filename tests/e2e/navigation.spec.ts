@@ -184,3 +184,20 @@ test("blocked steps offer the way forward", async ({ page }) => {
   await page.getByRole("button", { name: "Go to Add CVs" }).click();
   await expect(page).toHaveURL(/\/cvs$/);
 });
+
+test("the first screen arrives with data once the workspace cookie exists", async ({
+  page,
+}) => {
+  // The first visit sets the local demo cookie through the API.
+  await page.goto("/vacancies");
+  await expect(
+    page.getByRole("link", {
+      name: /Set criteria for Customer success manager/,
+    }),
+  ).toBeVisible();
+  const html = await (await page.request.get("/vacancies")).text();
+  expect(html).toContain("Customer success manager");
+  expect(html).not.toContain("Preparing your workspace");
+  const headers = (await page.request.get("/vacancies")).headers();
+  expect(headers["cache-control"]).toMatch(/no-store|private/);
+});
