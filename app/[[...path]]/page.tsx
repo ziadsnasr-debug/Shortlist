@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { WorkspaceApp } from "@/components/workspace";
+import { owner, readState } from "@/lib/store";
+import { workspaceView } from "@/lib/workspace-view";
 import { parsePath } from "@/components/workflow/routes";
 
 export async function generateMetadata({
@@ -23,6 +25,17 @@ export async function generateMetadata({
   };
 }
 
-export default function Page() {
-  return <WorkspaceApp />;
+// Render the first screen with real data so it appears without waiting for a
+// client fetch. Anything that needs a cookie write (local demo cookie, token
+// refresh) cannot happen during render, so the client fetch remains the
+// fallback and the API route handles it as before.
+export default async function Page() {
+  let initial = null;
+  try {
+    const access = await owner();
+    initial = workspaceView(access, await readState(access));
+  } catch {
+    initial = null;
+  }
+  return <WorkspaceApp initial={initial} />;
 }

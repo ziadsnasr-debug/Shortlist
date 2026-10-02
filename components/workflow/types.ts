@@ -18,7 +18,7 @@ export type PublicBatch = Omit<Batch, "applications"> & {
 export type PublicVacancy = Omit<Vacancy, "batches"> & {
   batches: PublicBatch[];
 };
-export type State = Omit<Workspace, "vacancies"> & {
+export type State = Omit<Workspace, "vacancies" | "audit"> & {
   vacancies: PublicVacancy[];
   role: string;
   mode: string;
