@@ -48,7 +48,10 @@ export function UploadZone({
     [over, setOver] = useState(false),
     [uploading, setUploading] = useState<string | null>(null),
     [queue, setQueue] = useState(0),
-    [rejected, setRejected] = useState<Rejected[]>([]);
+    [rejected, setRejected] = useState<Rejected[]>([]),
+    [uploadStep, setUploadStep] = useState<
+      "idle" | "reserving" | "transferring" | "queueing"
+    >("idle");
   const busy = uploading !== null;
   const blocked = disabled || !synthetic || busy;
 
@@ -77,6 +80,7 @@ export function UploadZone({
       setUploading(file.name);
       try {
         // Each reservation is checked against the current workspace version.
+        setUploadStep("reserving");
         const fresh = await fetch("/api/workspace", { cache: "no-store" });
         const { version } = await fresh.json();
         const type = fileType(file.name)!;
@@ -90,6 +94,7 @@ export function UploadZone({
           fileType: type,
           synthetic: true,
         });
+        setUploadStep("transferring");
         const put = await fetch(reservation.uploadUrl, {
           method: "PUT",
           headers: {
@@ -104,6 +109,7 @@ export function UploadZone({
           throw new Error(
             "The upload didn't finish. The file stays listed so you can retry or record a disposition.",
           );
+        setUploadStep("queueing");
         await post({ type: "finalise", documentId: reservation.documentId });
         done++;
       } catch (e) {
@@ -117,6 +123,7 @@ export function UploadZone({
       }
     }
     setUploading(null);
+    setUploadStep("idle");
     if (done)
       toast.success(
         done === 1
@@ -185,6 +192,11 @@ export function UploadZone({
           Choose fictional CV
         </label>
       </div>
+      <p className="sr-only" role="status" aria-live="polite">
+        {uploadStep === "reserving" && "Reserving a private upload slot."}
+        {uploadStep === "transferring" && "Uploading the fictional file."}
+        {uploadStep === "queueing" && "Queueing the uploaded file."}
+      </p>
       {rejected.length > 0 && (
         <div className="rejected" role="alert">
           <div className="rejected-head">

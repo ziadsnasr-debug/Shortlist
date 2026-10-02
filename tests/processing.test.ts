@@ -25,10 +25,11 @@ describe("file stages", () => {
 
   it("distinguishes only the stages the queue reports", () => {
     const processing = { state: "processing" as const, confirmed: false };
-    expect(fileStage(processing, doc("reserved"))).toBe("uploading");
+    expect(fileStage(processing, doc("reserved"))).toBe("awaiting_upload");
     expect(fileStage(processing, doc("queued", 0))).toBe("queued");
-    expect(fileStage(processing, doc("queued", 1))).toBe("reading");
-    expect(fileStage(processing)).toBe("reading");
+    expect(fileStage(processing, doc("queued", 1))).toBe("queued");
+    expect(fileStage(processing)).toBe("queued");
+    expect(fileStage(processing, doc("processing", 1))).toBe("reading");
   });
 
   it("surfaces problems from either record", () => {
@@ -44,7 +45,7 @@ describe("file stages", () => {
 
   it("groups stages for polling and pinning", () => {
     expect(
-      ["uploading", "queued", "reading"].every((s) => inFlight(s as never)),
+      ["awaiting_upload", "queued", "reading"].every((s) => inFlight(s as never)),
     ).toBe(true);
     expect(inFlight("ready")).toBe(false);
     expect(needsAttention("readable_copy")).toBe(true);

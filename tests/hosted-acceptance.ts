@@ -143,11 +143,11 @@ try {
     await page.getByRole("button", { name: "Verify and continue" }).click();
   }
   await page
-    .getByRole("button", { name: "Vacancies", exact: true })
+    .getByRole("link", { name: "Vacancies", exact: true })
     .first()
     .click();
   await expect(
-    page.getByRole("heading", { name: "Your vacancies" }),
+    page.getByRole("heading", { name: "Vacancies", level: 1 }),
   ).toBeVisible();
   const privateReadiness = await context.request.get(origin + "/api/readiness");
   expect(privateReadiness.status()).toBe(200);
@@ -188,7 +188,7 @@ try {
   await action({ ...base, type: "publish" });
   await page.reload();
   await page
-    .getByRole("button", { name: "Vacancies", exact: true })
+    .getByRole("link", { name: "Vacancies", exact: true })
     .first()
     .click();
   await page
@@ -347,7 +347,7 @@ try {
   expect(consoleErrors).toEqual([]);
   await page.setViewportSize({ width: 390, height: 844 });
   await page
-    .getByRole("button", { name: "Vacancies", exact: true })
+    .getByRole("link", { name: "Vacancies", exact: true })
     .last()
     .click();
   await page

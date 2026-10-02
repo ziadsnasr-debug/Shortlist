@@ -72,7 +72,7 @@ test("processing demo walks the real stages and settles on an honest result", as
     has: page.getByRole("heading", { name: "Processing" }),
   });
   await demo.getByRole("button", { name: "Replay processing" }).click();
-  await expect(demo.getByText("Waiting to start").first()).toBeVisible();
+  await expect(demo.getByText("Queued or processing").first()).toBeVisible();
   await expect(
     demo.getByText("Reading the CV and finding evidence").first(),
   ).toBeVisible({ timeout: 8000 });
