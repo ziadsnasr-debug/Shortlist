@@ -858,51 +858,6 @@ h3,
   transform: scaleX(var(--bar-size));
   animation: bar-enter 240ms var(--ease-out);
 }
-.batch-progress {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 14px;
-  padding: 16px 20px 20px;
-  margin: 18px 0;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--card);
-  overflow: hidden;
-}
-.batch-progress > div:not(.progress-track) {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  color: var(--muted-foreground);
-  font-size: 12px;
-}
-.batch-progress svg {
-  width: 15px;
-  height: 15px;
-  color: var(--primary);
-}
-.batch-progress strong {
-  font-variant-numeric: tabular-nums;
-  color: var(--foreground);
-}
-.progress-track {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--muted);
-}
-.progress-track span {
-  display: block;
-  height: 100%;
-  background: var(--primary);
-  transform-origin: left;
-  transition: transform 180ms var(--ease-out);
-}
 .score-track {
   max-width: 360px;
   margin: 10px 0;
@@ -1149,16 +1104,6 @@ select:focus-visible {
   }
   .demo-banner {
     padding: 12px 17px;
-  }
-  .batch-progress {
-    padding: 14px 16px 18px;
-    gap: 10px;
-  }
-  .batch-progress > div:not(.progress-track) {
-    font-size: 11px;
-  }
-  .batch-progress > div:nth-child(3) {
-    flex-basis: 100%;
   }
   .pagehead h1 {
     font-size: 28px;
@@ -2617,4 +2562,137 @@ receipt and finish mark. */
   background: transparent;
   border-color: var(--sidebar-border);
   color: var(--sidebar-muted);
+}
+
+/* Phase 6 polish: compact phone chrome, clamped names, icon rail. */
+.demo-short {
+  display: none;
+}
+.side-roles a .side-label {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (max-width: 680px) {
+  .demo-long {
+    display: none;
+  }
+  .demo-short {
+    display: inline;
+  }
+  .demo-banner {
+    padding: 8px 16px;
+  }
+  .pagehead h1 {
+    font-size: 24px;
+  }
+  .pagehead {
+    margin-bottom: 16px;
+  }
+  .steps ol {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .steps .step {
+    min-height: 0;
+    padding: 8px 2px;
+    gap: 4px;
+  }
+  .steps .step-number,
+  .steps .step .step-number {
+    width: 24px;
+    height: 24px;
+  }
+  .steps strong {
+    font-size: 11px;
+    line-height: 1.2;
+  }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .shell {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+  .sidebar {
+    padding: 20px 12px;
+    align-items: center;
+  }
+  /* Labels stay available to assistive technology; only the icons show. */
+  .sidebar .side-label,
+  .sidebar .account-text,
+  .sidebar .logo > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .sidebar .side-roles,
+  .sidebar .account-trigger > svg:last-child {
+    display: none;
+  }
+  .sidebar .brand {
+    padding: 4px;
+  }
+  .sidebar .jump-button,
+  .sidebar .side-nav a,
+  .sidebar .side-link {
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+  .sidebar .side-nav,
+  .sidebar .sidefoot {
+    align-items: center;
+  }
+  .sidebar .account-trigger {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    justify-content: center;
+    border: 0;
+  }
+}
+@media (max-width: 560px) {
+  .review-bar {
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    gap: 6px;
+  }
+  .review-bar .check-line {
+    font-size: 12px;
+    line-height: 1.35;
+    min-height: 0;
+  }
+  .review-bar-row {
+    gap: 6px;
+  }
+  .review-bar-status {
+    width: 100%;
+    font-size: 12px;
+  }
+  .review-bar .actions {
+    width: 100%;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  .review-bar .actions > button:not(.keys-hint) {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-inline: 8px;
+    font-size: 13px;
+    gap: 4px;
+  }
+  .review-bar .actions > button:has(.prev-label) {
+    flex: 0 0 44px;
+  }
+  .prev-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }

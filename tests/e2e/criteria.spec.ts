@@ -120,7 +120,7 @@ test("an incomplete criterion disables saving and says why", async ({
   await expect(save).toBeEnabled();
   await expect(page.getByText("Needs definitions")).toHaveCount(0);
   await save.click();
-  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  await expect(page.getByText("Criteria draft saved", { exact: true })).toBeVisible();
   await expect(page.getByText("Unsaved changes")).toHaveCount(0);
 });
 

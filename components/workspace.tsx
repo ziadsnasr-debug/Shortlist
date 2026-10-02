@@ -21,8 +21,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Administration } from "./administration";
-import { BatchProgress } from "./workspace-insights";
 import { Notice, Panel } from "./workflow/common";
+import type { Action } from "@/lib/workflow";
 import { steps, type State, type Send } from "./workflow/types";
 import { Criteria } from "./workflow/criteria";
 import { Intake } from "./workflow/intake";
@@ -37,6 +37,43 @@ import { NewVacancy } from "./workflow/new-vacancy";
 import { CommandMenu } from "./workflow/command-menu";
 
 const leaveMessage = "Save your draft before leaving this step.";
+
+// Say what actually happened instead of a generic "Saved".
+function savedMessage(action: Action, next: State) {
+  const label = (id: string) =>
+    next.vacancies
+      .flatMap((v) => v.batches)
+      .flatMap((b) => b.applications)
+      .find((a) => a.id === id)?.label ?? "CV";
+  switch (action.type) {
+    case "create":
+      return "Vacancy created";
+    case "rubric":
+      return "Criteria draft saved";
+    case "publish":
+      return "Criteria published";
+    case "samples":
+      return "Six sample CVs added";
+    case "close":
+      return "Intake closed. Review can start";
+    case "dispose":
+      return `Disposition recorded for ${label(action.applicationId)}`;
+    case "manual_source":
+      return `Checked passages saved for ${label(action.applicationId)}`;
+    case "review":
+      return action.confirm
+        ? `${label(action.applicationId)} confirmed`
+        : `Review draft saved for ${label(action.applicationId)}`;
+    case "selection":
+      return "Selection draft saved";
+    case "finalise":
+      return "Shortlist finalised";
+    case "next":
+      return "Next batch created";
+    default:
+      return "Saved";
+  }
+}
 
 export function WorkspaceApp() {
   const pathname = usePathname();
@@ -168,7 +205,7 @@ export function WorkspaceApp() {
       if (!response.ok) throw new Error(data.error);
       setState(data);
       setReveal(false);
-      toast.success("Saved");
+      toast.success(savedMessage(action, data));
       return data;
     } catch (e) {
       toast.error((e as Error).message);
@@ -230,18 +267,19 @@ export function WorkspaceApp() {
       />
     );
   else if (route.view === "admin")
-    page = isAdmin && !state?.temporaryPublic ? (
-      <Administration />
-    ) : (
-      <>
-        <h1 id="page-title" tabIndex={-1}>
-          Administration
-        </h1>
-        <Notice>
-          Administration is available to workspace administrators only.
-        </Notice>
-      </>
-    );
+    page =
+      isAdmin && !state?.temporaryPublic ? (
+        <Administration />
+      ) : (
+        <>
+          <h1 id="page-title" tabIndex={-1}>
+            Administration
+          </h1>
+          <Notice>
+            Administration is available to workspace administrators only.
+          </Notice>
+        </>
+      );
   else if (route.view === "missing" || !vacancy || !batch)
     page = (
       <section className="panel empty">
@@ -328,7 +366,6 @@ export function WorkspaceApp() {
           step={step}
           navigate={navigate}
         />
-        {step > 0 && <BatchProgress applications={batch.applications} />}
         <div className="workflow-content" key={`${batch.id}-${step}`}>
           {step === 0 && (
             <Criteria
@@ -369,6 +406,7 @@ export function WorkspaceApp() {
               onNext={() => navigate(stepPath(3), { force: true })}
               candidate={route.candidate}
               onCandidate={(n, force) => navigate(stepPath(2, n), { force })}
+              onIntake={() => navigate(stepPath(1))}
             />
           )}
           {step === 3 && (
@@ -379,6 +417,7 @@ export function WorkspaceApp() {
               send={send}
               busy={busy}
               canStartNext={isAdmin}
+              onReview={() => navigate(stepPath(2))}
               onDirty={setUnsaved}
               reveal={reveal}
               onReveal={() => {
@@ -430,10 +469,15 @@ export function WorkspaceApp() {
         <div className="demo-banner">
           <span className="demo-chip">
             <FlaskConical aria-hidden="true" />
-            <span>
+            <span className="demo-long">
               <strong>Synthetic proof of concept.</strong> Fictional CVs only.
               Real applicant data is disabled.
-              {state?.temporaryPublic && " Temporary access: no sign-in required."}
+              {state?.temporaryPublic &&
+                " Temporary access: no sign-in required."}
+            </span>
+            <span className="demo-short">
+              <strong>Synthetic POC</strong> · fictional CVs only
+              {state?.temporaryPublic && " · open pilot"}
             </span>
           </span>
           <span className="save-status" role="status">

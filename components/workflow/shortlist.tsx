@@ -42,8 +42,10 @@ export function Shortlist({
   onNew,
   onDirty,
   canStartNext,
+  onReview,
 }: {
   canStartNext: boolean;
+  onReview: () => void;
   vacancy: PublicVacancy;
   batch: PublicBatch;
   send: Send;
@@ -80,6 +82,9 @@ export function Shortlist({
               ? `Ranking appears after all ${active.length} CVs are reviewed. ${left} remaining.`
               : "Comparative ranking appears only after intake closes and every active application has a resolved human review."}
           </p>
+          {batch.closed && left > 0 && (
+            <Button onClick={onReview}>Continue reviewing</Button>
+          )}
         </div>
       </Panel>
     );
