@@ -357,10 +357,12 @@ async function main() {
 
   const currentLedgerPath = join(scratch, "current-deletions.json");
   phase = "export current ledger";
-  const exportOutput = await child("scripts/export-ledger.ts", [currentLedgerPath], env);
-  assert(exportOutput.includes("Current deletion ledger exported"));
+  await child("scripts/export-ledger.ts", [currentLedgerPath], env);
   const currentLedger = JSON.parse(await readFile(currentLedgerPath, "utf8"));
   assert(currentLedger.count === 1005, "Ledger export omitted rows beyond the first page.");
+  assert(currentLedger.policyCount === currentLedger.policies.length, "Policy export count differs.");
+  assert(currentLedger.holdCount === currentLedger.holds.length, "Hold export count differs.");
+  assert(Number.isSafeInteger(currentLedger.lifecycleRevision), "Lifecycle revision is missing.");
 
   // Remove source identity and source workspace before restoring with a different administrator.
   phase = "remove source workspace and reviewer";

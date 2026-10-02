@@ -1,17 +1,24 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-let commit = "uncommitted";
+let commit = "unavailable", trackedChanges = null;
 try {
   commit = execFileSync("git", ["rev-parse", "HEAD"], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
   }).trim();
+  trackedChanges = execFileSync("git", ["diff", "--name-only", "HEAD"], {
+    encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
+  }).trim().length > 0;
 } catch {}
 const manifest = {
   release: pkg.version,
   commit,
-  runtime: process.version,
+  generatedAt: new Date().toISOString(),
+  trackedChanges,
+  generatorRuntime: process.version,
+  requiredRuntime: pkg.engines.node,
+  hostedRuntime: "Not verified by this local generator",
   dependencies: pkg.dependencies,
   devDependencies: pkg.devDependencies,
   specification: "1.2 / 2026-10-02",
@@ -23,13 +30,13 @@ const manifest = {
     ? JSON.parse(readFileSync("work/parser/manifest.json", "utf8"))
     : null,
   activation:
-    "Synthetic implementation; local and authenticated hosted managed-parser/OpenAI workflow passed; independent evaluation and customer real-data acceptance pending",
-  parserSnapshot: "Configured privately per deployment; actual London synthetic probes passed",
-  providerModel: "gpt-6-luna (live synthetic two-pass spike verified)",
+    "Synthetic only; this inventory does not execute tests or establish deployment, model quality or acceptance",
+  parserSnapshot: "Configured privately per deployment; not inspected by this generator",
+  providerModel: "Configured privately per deployment; not inspected by this generator",
 };
-mkdirSync("docs", { recursive: true });
+mkdirSync("outputs", { recursive: true });
 writeFileSync(
-  "docs/release-manifest.json",
+  "outputs/release-manifest.json",
   JSON.stringify(manifest, null, 2) + "\n",
 );
-console.log("Release manifest written; no environment values included.");
+console.log("Release inventory written to outputs/release-manifest.json; no environment values included.");
