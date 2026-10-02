@@ -5,6 +5,13 @@ import { databaseClient } from "../supabase";
 import { readState, type Owner } from "../store";
 import { requireRule, WorkflowError } from "../workflow";
 import { documentType, hash } from "./contracts";
+import {
+  ageSeconds,
+  documentStage,
+  safeErrorMessage,
+  type OperationDocument,
+} from "../operation-status";
+import { pagedRows } from "../recovery-export";
 export function requireHosted(access: Owner) {
   if (access.local)
     throw new WorkflowError(
@@ -117,12 +124,18 @@ export async function finaliseUpload(access: Owner, id: string) {
 export async function documentsFor(access: Owner) {
   requireHosted(access);
   const state = await readState(access);
-  const { data, error } = await databaseClient()
-    .from("documents")
-    .select(
-      "id,application_key,status,safe_error_code,attempts,reserved_at,deletion_state",
-    )
-    .eq("workspace_id", access.workspaceId);
-  if (error) throw new Error("DOCUMENT_LIST");
-  return { documents: data, stateVersion: state.version };
+  const rows = await pagedRows<OperationDocument>(
+    databaseClient(),
+    "documents",
+    { workspace_id: access.workspaceId, deletion_state: "retained" },
+    "id",
+    "id,application_key,status,safe_error_code,attempts,reserved_at,deletion_state",
+  );
+  const documents = rows.map((document) => ({
+    ...document,
+    stage: documentStage(document),
+    reservation_age_seconds: ageSeconds(document.reserved_at),
+    safe_error_message: safeErrorMessage(document.safe_error_code),
+  }));
+  return { documents, stateVersion: state.version };
 }

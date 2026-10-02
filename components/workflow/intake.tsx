@@ -58,6 +58,7 @@ export function Intake({
 }) {
   const [docs, setDocs] = useState<DocumentRecord[]>([]);
   const [error, setError] = useState("");
+  const [refreshError, setRefreshError] = useState("");
   const [announcement, setAnnouncement] = useState("");
   const [open, setOpen] = useState<{
     id: string;
@@ -83,9 +84,12 @@ export function Intake({
     try {
       const r = await fetch("/api/documents", { cache: "no-store" });
       const d = await r.json();
-      if (r.ok) setDocs(d.documents);
+      if (!r.ok)
+        throw new Error("Unable to refresh processing status. Try again.");
+      setDocs(d.documents);
+      setRefreshError("");
     } catch {
-      // A missed poll is retried on the next tick.
+      setRefreshError("Unable to refresh processing status. Try again.");
     }
   }, [uploads]);
 
@@ -212,7 +216,7 @@ export function Intake({
                 Retry processing
               </Button>
             )}
-            {(needsAttention(stage) || stage === "reading") &&
+            {["processing", "attention", "readable_copy"].includes(app.state) &&
               !batch.closed && (
                 <Button
                   size="sm"
@@ -426,6 +430,20 @@ export function Intake({
           <p className="inline-error" role="alert">
             {error}
           </p>
+        )}
+        {refreshError && (
+          <p className="inline-error" role="alert">
+            {refreshError}
+          </p>
+        )}
+        {uploads && (
+          <Button
+            variant="outline"
+            onClick={() => void loadDocs()}
+            disabled={busy}
+          >
+            Refresh processing status
+          </Button>
         )}
         {uploads && batch.published && !batch.closed && (
           <UploadZone

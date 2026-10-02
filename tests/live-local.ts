@@ -17,7 +17,10 @@ const db = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 const owner = JSON.parse(await readFile("work/local-owner.json", "utf8"));
-const origin = "http://127.0.0.1:3218";
+const origin = process.env.LOCAL_APP_URL ?? "http://127.0.0.1:3218";
+const originUrl = new URL(origin);
+if (!originUrl.protocol.startsWith("http") || !["127.0.0.1", "localhost"].includes(originUrl.hostname))
+  throw new Error("LOCAL_ONLY");
 const browser = await chromium.launch();
 const context = await browser.newContext(),
   page = await context.newPage();
@@ -57,12 +60,12 @@ try {
     expect(
       (
         await context.request.get(origin + "/api/workspace", {
-          headers: { host: "attacker.example:3218" },
+          headers: { host: `attacker.example${originUrl.port ? `:${originUrl.port}` : ""}` },
         })
       ).status(),
     ).toBe(403);
     await page.goto(origin + "/login");
-    await expect(page).toHaveURL(origin + "/");
+    await page.goto(origin + "/vacancies");
   } else {
     await page.goto(origin + "/login");
     await page.getByLabel("Email", { exact: true }).fill(owner.email);

@@ -19,10 +19,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { stageHelp, type FileStage } from "@/components/workflow/processing";
+import { formatAge } from "@/lib/operation-status";
 import {
   shortId,
   type AdminDocument,
   type Busy,
+  type ProcessingSummary,
   type SendAction,
 } from "./types";
 
@@ -35,6 +37,13 @@ function describe(d: AdminDocument): {
   icon: ReactNode;
 } {
   switch (d.status) {
+    case "processing":
+      return {
+        stage: "reading",
+        label: "Processing",
+        tone: "accent",
+        icon: <ScanText />,
+      };
     case "complete":
       return {
         stage: "ready",
@@ -58,36 +67,32 @@ function describe(d: AdminDocument): {
       };
     case "reserved":
       return {
-        stage: "uploading",
-        label: "Uploading",
+        stage: "awaiting_upload",
+        label: "Awaiting upload",
         tone: "neutral",
         icon: <Upload />,
       };
     default:
-      return d.attempts === 0
-        ? {
-            stage: "queued",
-            label: "Waiting to start",
-            tone: "neutral",
-            icon: <Clock />,
-          }
-        : {
-            stage: "reading",
-            label: "Reading",
-            tone: "accent",
-            icon: <ScanText />,
-          };
+      // The queue cannot tell waiting from running for queued files.
+      return {
+        stage: "queued",
+        label: "Queued or processing",
+        tone: "neutral",
+        icon: <Clock />,
+      };
   }
 }
 
 export function ProcessingTab({
   documents,
+  summary,
   paused,
   busy,
   send,
   refresh,
 }: {
   documents: AdminDocument[];
+  summary?: ProcessingSummary;
   paused: boolean;
   busy: Busy;
   send: SendAction;
@@ -126,6 +131,30 @@ export function ProcessingTab({
             Refresh status
           </Button>
         </div>
+        {summary && (
+          <dl
+            role="status"
+            aria-label="Processing status"
+            className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-card p-4 text-sm sm:grid-cols-5"
+          >
+            {(
+              [
+                ["Retained files", summary.total],
+                ["Awaiting upload", summary.awaiting_upload],
+                ["Queued or processing", summary.queued_or_processing],
+                ["Ready", summary.ready],
+                ["Need attention", summary.attention],
+              ] as const
+            ).map(([term, value]) => (
+              <div key={term} className="grid gap-0.5">
+                <dt className="text-xs text-muted-foreground">{term}</dt>
+                <dd className="font-mono text-base tabular-nums text-foreground">
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
         {paused && (
           <p id="process-paused" className="text-sm">
             Processing is paused. Turn off Pause intake and inference in
@@ -151,6 +180,10 @@ export function ProcessingTab({
                 <TableRow className="hover:bg-transparent">
                   <TableHead scope="col">Document</TableHead>
                   <TableHead scope="col">Status</TableHead>
+                  <TableHead scope="col" className="text-right">
+                    Attempts
+                  </TableHead>
+                  <TableHead scope="col">Upload age</TableHead>
                   <TableHead scope="col">What it means</TableHead>
                 </TableRow>
               </TableHeader>
@@ -170,7 +203,20 @@ export function ProcessingTab({
                           {s.label}
                         </StatusChip>
                       </TableCell>
+                      <TableCell className="text-right align-top font-mono tabular-nums">
+                        {d.attempts ?? "–"}
+                      </TableCell>
+                      <TableCell className="align-top whitespace-nowrap">
+                        {d.reservation_age_seconds === undefined
+                          ? "–"
+                          : formatAge(d.reservation_age_seconds)}
+                      </TableCell>
                       <TableCell className="max-w-md text-muted-foreground">
+                        {d.safe_error_message && (
+                          <span className="block text-foreground">
+                            {d.safe_error_message}
+                          </span>
+                        )}
                         {stageHelp(s.stage, d.safe_error_code) ??
                           "No problem recorded."}
                       </TableCell>

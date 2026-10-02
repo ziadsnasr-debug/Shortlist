@@ -1778,11 +1778,11 @@ file rows and the reading glyph. */
   stroke-width: 2.5;
   opacity: 0;
 }
-.glyph-uploading,
+.glyph-awaiting_upload,
 .glyph-queued {
   opacity: 0.6;
 }
-.glyph-uploading .glyph-page {
+.glyph-awaiting_upload .glyph-page {
   stroke-dasharray: 4 3;
 }
 .glyph-reading .glyph-scan {

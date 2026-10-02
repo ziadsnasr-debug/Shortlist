@@ -8,10 +8,12 @@ import type { Busy } from "./types";
 
 export function DataTab({
   pending,
+  earliest,
   busy,
   deleteContent,
 }: {
   pending: number;
+  earliest?: string;
   busy: Busy;
   deleteContent: (applicationId: string, confirm: string) => Promise<boolean>;
 }) {
@@ -84,6 +86,17 @@ export function DataTab({
       <p className="border-t border-border pt-3 text-sm">
         {pending} pending deletion {pending === 1 ? "record" : "records"}. Use
         documented recovery and deletion runbooks.
+        {earliest && (
+          <>
+            {" "}
+            Earliest safe completion (not a service level):{" "}
+            {new Date(earliest).toLocaleString("en-GB", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+            .
+          </>
+        )}
       </p>
     </section>
   );

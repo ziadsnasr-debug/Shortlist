@@ -71,6 +71,7 @@ export function Administration() {
             <TabsContent value="processing" forceMount className={panel}>
               <ProcessingTab
                 documents={data.documents}
+                summary={data.processing}
                 paused={data.settings.paused}
                 busy={a.busy}
                 send={a.send}
@@ -80,6 +81,12 @@ export function Administration() {
             <TabsContent value="data" forceMount className={panel}>
               <DataTab
                 pending={data.deletions.filter((d) => !d.completed_at).length}
+                earliest={
+                  data.deletions
+                    .filter((d) => !d.completed_at && d.ready_after)
+                    .map((d) => d.ready_after!)
+                    .sort()[0]
+                }
                 busy={a.busy}
                 deleteContent={a.deleteContent}
               />

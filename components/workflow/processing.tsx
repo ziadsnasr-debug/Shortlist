@@ -13,7 +13,7 @@ export type DocumentRecord = {
 // extraction and evidence finding together: the queue does not report which
 // of the two is running, so the interface does not pretend to know.
 export type FileStage =
-  | "uploading"
+  | "awaiting_upload"
   | "queued"
   | "reading"
   | "ready"
@@ -32,14 +32,14 @@ export function fileStage(
     return "readable_copy";
   if (app.state === "attention" || doc?.status === "attention")
     return "attention";
-  if (doc?.status === "reserved") return "uploading";
-  if (doc && doc.attempts === 0) return "queued";
-  return "reading";
+  if (doc?.status === "reserved") return "awaiting_upload";
+  if (doc?.status === "processing") return "reading";
+  return "queued";
 }
 
 export const stageLabel: Record<FileStage, string> = {
-  uploading: "Uploading",
-  queued: "Waiting to start",
+  awaiting_upload: "Awaiting upload",
+  queued: "Queued or processing",
   reading: "Reading the CV and finding evidence",
   ready: "Ready to review",
   reviewed: "Reviewed",
@@ -49,7 +49,7 @@ export const stageLabel: Record<FileStage, string> = {
 };
 
 export const inFlight = (s: FileStage) =>
-  s === "uploading" || s === "queued" || s === "reading";
+  s === "awaiting_upload" || s === "queued" || s === "reading";
 export const needsAttention = (s: FileStage) =>
   s === "readable_copy" || s === "attention";
 

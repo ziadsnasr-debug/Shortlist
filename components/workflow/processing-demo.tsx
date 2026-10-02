@@ -31,7 +31,7 @@ const files: { label: string; file: string; path: FileStage[] }[] = [
   {
     label: "Candidate 04",
     file: "fictional-d.pdf",
-    path: ["uploading", "queued", "reading", "ready"],
+    path: ["awaiting_upload", "queued", "reading", "ready"],
   },
 ];
 
