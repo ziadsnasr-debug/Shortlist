@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { type Criterion } from "@/lib/workflow";
 import { WeightChart } from "../workspace-insights";
 import { sampleRubric } from "@/fixtures/synthetic/seed";
+import { ROLE_TEMPLATES, instantiateRoleTemplate } from "@/lib/role-templates";
 import { Notice } from "./common";
 import {
   INCOMPLETE_REASON,
@@ -438,7 +439,7 @@ export function Criteria({
             </section>
           ))
         )}
-        {!drafting && !rubric.length && (
+      {!drafting && !rubric.length && (
           <p className="text-sm text-muted-foreground">
             No criteria yet. Add one, or start from the editable examples.
           </p>
@@ -446,6 +447,32 @@ export function Criteria({
       </div>
       {editable && (
         <div className="mt-4 flex flex-wrap items-center gap-3">
+          <label className="grid gap-1 text-sm" htmlFor="role-template">
+            <span className="font-medium">Start from a role template</span>
+            <select
+              id="role-template"
+              className="h-10 rounded-md border border-input bg-background px-3"
+              defaultValue=""
+              disabled={busy || drafting}
+              onChange={(event) => {
+                const id = event.target.value as (typeof ROLE_TEMPLATES)[number]["id"];
+                if (!id) return;
+                const template = ROLE_TEMPLATES.find((item) => item.id === id)!;
+                replaceAll(
+                  instantiateRoleTemplate(id),
+                  `${template.name} template loaded. Review and edit before saving.`,
+                );
+                event.currentTarget.value = "";
+              }}
+            >
+              <option value="">Choose a template…</option>
+              {ROLE_TEMPLATES.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.name} · v{template.version}
+                </option>
+              ))}
+            </select>
+          </label>
           <Button
             id="add-criterion"
             variant="outline"

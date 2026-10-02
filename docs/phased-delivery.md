@@ -21,3 +21,5 @@ Copy templates into unpublished rubrics with fresh IDs and existing validation; 
 ## Release acceptance
 
 Independent recruiter review, privacy/data-route approvals, operational ownership and another operator deployment/restore remain required. Tests validate software behaviour; they do not establish recruitment accuracy, fairness or real-CV permission.
+
+Delivery checkpoint: Phases 1–3 implemented, tested, merged and synthetically demonstrated locally/hosted. Phase 3 is PR #18 (`38d2316`); the expiring public fictional pilot remains separate from authenticated MFA evidence. Phase 4 implementation includes three editable built-in role presets and fail-closed recorded-evidence gates; independent pilot inputs remain pending. Final Phase 4 check/merge/deployment evidence is recorded in phase4-status.md.
