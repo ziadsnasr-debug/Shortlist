@@ -1384,3 +1384,8 @@ select:focus-visible {
     margin-bottom: 20px;
   }
 }
+@media (max-width: 680px) {
+  .workspace-label {
+    display: none;
+  }
+}
