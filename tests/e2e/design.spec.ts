@@ -1,21 +1,29 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { publishCriteria } from "./criteria-helpers";
+const criteria = "/vacancies/customer-success/first-batch/criteria";
 
 test("weight chart follows edits and stays readable at narrow sizes", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto(criteria);
   await expect(
     page.getByRole("region", { name: "Criteria weight allocation" }),
   ).toBeVisible();
   await page.getByLabel("Points", { exact: true }).first().fill("1");
-  await expect(page.getByText(/points left to allocate/)).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Criteria weight allocation" })
+      .getByText("76 of 100 points · 24 to allocate"),
+  ).toBeVisible();
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await expect(
       page.getByRole("region", { name: "Criteria weight allocation" }),
     ).toBeVisible();
-    const bounds = await page.locator(".insight-panel").boundingBox();
+    const bounds = await page
+      .getByRole("region", { name: "Criteria weight allocation" })
+      .boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
     expect(
@@ -31,19 +39,23 @@ test("source links focus actual passage; reduced motion and review gates remain 
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
-  await page
-    .getByRole("button", { name: "Publish criteria", exact: true })
-    .click();
+  await page.goto(criteria);
+  await publishCriteria(page);
   await page
     .getByRole("button", { name: "Add sample CVs", exact: true })
     .click();
-  await page.getByRole("button", { name: "Shortlist", exact: false }).click();
+  await page
+    .getByRole("navigation", { name: "Vacancy workflow" })
+    .getByRole("link", { name: /Shortlist/ })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Review every CV first" }),
   ).toBeVisible();
   await expect(page.locator(".score-track, .comparison-panel")).toHaveCount(0);
-  await page.getByRole("button", { name: /Add CVs/ }).click();
+  await page
+    .getByRole("navigation", { name: "Vacancy workflow" })
+    .getByRole("link", { name: /Add CVs/ })
+    .click();
   await page.getByRole("button", { name: "Start review", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 850 });
   await page.locator(".quote").first().click();
@@ -61,16 +73,24 @@ test("source links focus actual passage; reduced motion and review gates remain 
 
 test("mobile workspace retains administration navigation", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 850 });
-  await page.goto("/");
-  await page
+  await page.goto(criteria);
+  await page.getByRole("button", { name: "Open menu" }).click();
+  const menu = page.getByRole("dialog");
+  await menu
     .getByRole("navigation", { name: "Main navigation" })
-    .getByRole("button", { name: "Vacancies", exact: true })
+    .getByRole("link", { name: "Vacancies", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Your vacancies" }),
+    page.getByRole("heading", { name: "Vacancies", level: 1 }),
   ).toBeVisible();
-  await page.locator(".mobile-admin").click();
+  await expect(page).toHaveURL(/\/vacancies$/);
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("link", { name: "Administration" })
+    .click();
+  await expect(page).toHaveURL(/\/admin$/);
   await expect(
-    page.getByRole("button", { name: "Back to workspace" }),
+    page.getByRole("heading", { name: "Administration", level: 1 }),
   ).toBeVisible();
 });

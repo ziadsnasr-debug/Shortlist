@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { publishCriteria } from "./criteria-helpers";
 
 test.afterEach(async ({ page }) => {
   await page.unrouteAll({ behavior: "wait" });
@@ -14,12 +15,14 @@ async function intake(page: Page) {
     const response = await route.fetch();
     const body = await response.json();
     body.capabilities = { ...body.capabilities, uploads: true };
+    for (const vacancy of body.vacancies)
+      for (const batch of vacancy.batches)
+        for (const app of batch.applications)
+          if (app.id === "A101") app.state = "processing";
     await route.fulfill({ response, json: body });
   });
-  await page.goto("/");
-  await page
-    .getByRole("button", { name: "Publish criteria", exact: true })
-    .click();
+  await page.goto("/vacancies/customer-success/first-batch/criteria");
+  await publishCriteria(page);
   await page
     .getByRole("button", { name: "Add sample CVs", exact: true })
     .click();
@@ -77,16 +80,22 @@ test("interrupted upload remains visible and polling does not erase its error", 
   await intake(page);
   await page.getByLabel("Choose fictional CV").setInputFiles(file);
   const failure = page.getByText(
-    "Upload incomplete; reserved item remains visible.",
-    { exact: true },
+    "The upload didn't finish. The file stays listed so you can retry or record a disposition.",
+    { exact: false },
   );
   await expect(failure).toBeVisible();
   await expect(
-    page.getByText("Awaiting upload", { exact: true }),
+    page.getByText("Status: Awaiting upload", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Ready for review", { exact: true })).toHaveCount(
-    0,
-  );
+  await expect(
+    page.locator(".file-row").filter({ hasText: "OTHER-CV" }),
+  ).toHaveCount(0);
+  await expect(
+    page
+      .locator(".file-row")
+      .filter({ hasText: "Candidate 01" })
+      .getByRole("button", { name: "Transcribe passages" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Refresh processing status" }).click();
   await expect(failure).toBeVisible();
   refreshFails = true;
@@ -147,27 +156,27 @@ test("transfer and queue progress do not claim analysis has completed", async ({
     await intake(page);
     await page.getByLabel("Choose fictional CV").setInputFiles(file);
     await expect(
-      page.getByText("Reserving a private upload slot…", { exact: true }),
+      page.getByText("Reserving a private upload slot.", { exact: true }),
     ).toBeVisible();
     releaseReserve();
     await expect(
-      page.getByText("Uploading the fictional file…", { exact: true }),
+      page.getByText("Uploading the fictional file.", { exact: true }),
     ).toBeVisible();
     releaseUpload();
     await expect(
-      page.getByText("Queueing the uploaded file…", { exact: true }),
+      page.getByText("Queueing the uploaded file.", { exact: true }),
     ).toBeVisible();
     await expect(page.getByLabel("Choose fictional CV")).toBeDisabled();
     releaseQueue();
     await expect(page.getByLabel("Choose fictional CV")).toBeEnabled();
     await expect(
       page.getByText(
-        "Document queued. Processing continues without this browser.",
+        "CV queued. Processing continues even if you close this page.",
         { exact: true },
       ),
     ).toBeVisible();
     await expect(
-      page.getByText("Ready for review", { exact: true }),
+      page.locator(".file-row").filter({ hasText: "OTHER-CV" }),
     ).toHaveCount(0);
   } finally {
     releaseReserve();

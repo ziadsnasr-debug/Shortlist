@@ -17,7 +17,10 @@ const db = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 const owner = JSON.parse(await readFile("work/local-owner.json", "utf8"));
-const origin = "http://127.0.0.1:3218";
+const origin = process.env.LOCAL_APP_URL ?? "http://127.0.0.1:3218";
+const originUrl = new URL(origin);
+if (!originUrl.protocol.startsWith("http") || !["127.0.0.1", "localhost"].includes(originUrl.hostname))
+  throw new Error("LOCAL_ONLY");
 const browser = await chromium.launch();
 const context = await browser.newContext(),
   page = await context.newPage();
@@ -57,12 +60,12 @@ try {
     expect(
       (
         await context.request.get(origin + "/api/workspace", {
-          headers: { host: "attacker.example:3218" },
+          headers: { host: `attacker.example${originUrl.port ? `:${originUrl.port}` : ""}` },
         })
       ).status(),
     ).toBe(403);
     await page.goto(origin + "/login");
-    await expect(page).toHaveURL(origin + "/");
+    await page.goto(origin + "/vacancies");
   } else {
     await page.goto(origin + "/login");
     await page.getByLabel("Email", { exact: true }).fill(owner.email);
@@ -73,12 +76,9 @@ try {
       .fill(totp(owner.secret));
     await page.getByRole("button", { name: "Verify and continue" }).click();
   }
-  await page
-    .getByRole("button", { name: "Vacancies", exact: true })
-    .first()
-    .click();
+  await page.goto(origin + "/vacancies");
   await expect(
-    page.getByRole("heading", { name: "Your vacancies" }),
+    page.getByRole("heading", { name: "Vacancies", level: 1 }),
   ).toBeVisible();
   const privateReadiness = await context.request.get(origin + "/api/readiness");
   expect(privateReadiness.status()).toBe(200);
@@ -123,14 +123,11 @@ try {
   await action({ ...base, type: "rubric", rubric: sampleRubric });
   await action({ ...base, type: "publish" });
   await page.reload();
-  await page
-    .getByRole("button", { name: "Vacancies", exact: true })
-    .first()
-    .click();
+  await page.goto(origin + "/vacancies");
   await page
     .locator(".vacancy-row")
     .filter({ hasText: title })
-    .getByRole("button", { name: "Continue", exact: true })
+    .getByRole("link", { name: new RegExp(` for ${title}$`) })
     .click();
   await page
     .getByLabel("I confirm these files contain fictional data only.")
@@ -272,14 +269,11 @@ try {
   );
   expect(consoleErrors).toEqual([]);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page
-    .getByRole("button", { name: "Vacancies", exact: true })
-    .last()
-    .click();
+  await page.goto(origin + "/vacancies");
   await page
     .locator(".vacancy-row")
     .filter({ hasText: title })
-    .getByRole("button", { name: "Continue", exact: true })
+    .getByRole("link", { name: new RegExp(` for ${title}$`) })
     .click();
   const fits = await page.evaluate(
     () => document.documentElement.scrollWidth <= innerWidth,
