@@ -5,8 +5,8 @@ import { owner } from "@/lib/store";
 import { databaseClient } from "@/lib/supabase";
 import { administration, administrator } from "@/lib/administration";
 import { jsonBody, fail, privateHeaders } from "@/lib/http";
-import { consumeDocuments } from "@/lib/pipeline/consumer";
-import { recoverDeletions } from "@/lib/pipeline/deletion";
+import { runPipelineCycle } from "@/lib/pipeline/coordinator";
+import { PIPELINE_INVOCATION_MS } from "@/lib/pipeline/deadline";
 import { WorkflowError } from "@/lib/workflow";
 export const maxDuration = 240;
 const Input = z.discriminatedUnion("type", [
@@ -45,18 +45,17 @@ export async function GET() {
   }
 }
 export async function POST(req: NextRequest) {
+  // Include request parsing, authorization and rate limiting in the same
+  // invocation budget as processing and its post-cycle audit.
+  const deadline = Date.now() + PIPELINE_INVOCATION_MS;
   try {
     const input = await jsonBody(req, Input),
       access = await owner();
     administrator(access);
     await rateLimit(access.actor, "admin-write", 10, 60);
-    const db = databaseClient();
+    const db = databaseClient(input.type === "process" ? deadline : undefined);
     if (input.type === "process") {
-      const deadline = Date.now() + 220000;
-      const result = {
-        ...(await consumeDocuments(deadline)),
-        deletions: await recoverDeletions(deadline),
-      };
+      const result = await runPipelineCycle(deadline);
       const { error } = await db.from("audit_events").insert({
         workspace_id: access.workspaceId,
         actor: access.actor,

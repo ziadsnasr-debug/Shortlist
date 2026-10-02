@@ -4,6 +4,11 @@ import { signalUntil } from "../bounded-fetch";
 import { administrator } from "../administration";
 import type { Owner } from "../store";
 import { WorkflowError } from "../workflow";
+import {
+  DELETION_START_RESERVE_MS,
+  deletionOperationDeadline,
+  hasDeadlineBudget,
+} from "./deadline";
 export async function deleteApplication(access: Owner, id: string) {
   administrator(access);
   const db = databaseClient();
@@ -45,8 +50,8 @@ export async function deleteApplication(access: Owner, id: string) {
   return { deleted: true };
 }
 export async function recoverDeletions(deadline = Date.now() + 60000) {
-  if (Date.now() > deadline - 35000) return 0;
-  const operationDeadline = deadline - 5000;
+  if (!hasDeadlineBudget(deadline, DELETION_START_RESERVE_MS)) return 0;
+  const operationDeadline = deletionOperationDeadline(deadline);
   const signal = signalUntil(operationDeadline);
   const db = databaseClient(operationDeadline);
   const { data, error } = await db
@@ -59,7 +64,11 @@ export async function recoverDeletions(deadline = Date.now() + 60000) {
   if (signal.aborted) return 0;
   let completed = 0;
   for (const record of data ?? []) {
-    if (Date.now() > deadline - 35000 || signal.aborted) break;
+    if (
+      !hasDeadlineBudget(deadline, DELETION_START_RESERVE_MS) ||
+      signal.aborted
+    )
+      break;
     const { data: docs, error: d } = await db
       .from("documents")
       .select("private_object_key")

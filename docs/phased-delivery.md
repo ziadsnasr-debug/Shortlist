@@ -22,6 +22,14 @@ Copy templates into unpublished rubrics with fresh IDs and existing validation; 
 
 Check public HTTP behaviour in an explicitly selected authenticated or temporary fictional pilot mode. Refuse foreign redirects, unexpectedly exposed administrator endpoints and missing private cache headers. Include temporary pilot configuration in private preflight. Keep live dependency checks separate from static configuration and independent acceptance.
 
+## Phase 6 — Recovery timing and truthful release artifacts
+
+Reserve usable cleanup time after slow processing, attempt recovery after queue failures and include administrator authentication in the invocation deadline. Verify timeout handoff, safe errors, token-expiry fences and recovery counts. Generate release inventory from immutable source; record deployment evidence separately.
+
+## Phase 7 — Processing allowance visibility
+
+Expose existing current-UTC-month processing reservations, runtime cap and remaining units privately in Administration. Fail closed on lookup errors; label admitted attempts and retries accurately. Add an in-app near-limit notice without monetary estimates or external notifications.
+
 ## Release acceptance
 
 Independent recruiter review, privacy/data-route approvals, operational ownership and another operator deployment/restore remain required. Tests validate software behaviour; they do not establish recruitment accuracy, fairness or real-CV permission.

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
-import { recoverDeletions } from "@/lib/pipeline/deletion";
-import { consumeDocuments } from "@/lib/pipeline/consumer";
+import { runPipelineCycle } from "@/lib/pipeline/coordinator";
+import { PIPELINE_INVOCATION_MS } from "@/lib/pipeline/deadline";
 import { privateHeaders, fail } from "@/lib/http";
 export const maxDuration = 240;
 export async function GET(req: NextRequest) {
@@ -18,14 +18,10 @@ export async function GET(req: NextRequest) {
       { status: 401, headers: privateHeaders },
     );
   try {
-    const deadline = Date.now() + 220000;
-    return NextResponse.json(
-      {
-        ...(await consumeDocuments(deadline)),
-        deletions: await recoverDeletions(deadline),
-      },
-      { headers: privateHeaders },
-    );
+    const deadline = Date.now() + PIPELINE_INVOCATION_MS;
+    return NextResponse.json(await runPipelineCycle(deadline), {
+      headers: privateHeaders,
+    });
   } catch (e) {
     return fail(e);
   }

@@ -6,11 +6,17 @@ import { databaseClient } from "../supabase";
 import type { Application, Workspace } from "../workflow";
 import { parseInSandbox } from "./sandbox";
 import { assess } from "./ai";
+import {
+  CONSUMER_WORK_RESERVE_MS,
+  consumerWorkDeadline,
+  hasDeadlineBudget,
+} from "./deadline";
 const Message = z.object({ document_id: z.uuid() }).strict();
 export async function consumeDocuments(deadline = Date.now() + 220000) {
   if (Date.now() > deadline - 175000) return { completed: 0, failed: 0 };
   configuration();
-  const workDeadline = deadline - 35000;
+  // Reserve deletion start time plus bounded lookup, cleanup and handoff time.
+  const workDeadline = consumerWorkDeadline(deadline);
   const signal = signalUntil(workDeadline);
   const db = databaseClient(workDeadline);
   const { data: messages, error } = await db.rpc("read_document_queue");
@@ -21,7 +27,12 @@ export async function consumeDocuments(deadline = Date.now() + 220000) {
   for (const message of messages ?? []) {
     // Leave enough time for sandbox setup, two bounded model calls and the
     // database commit. The cron route reserves the remainder for deletions.
-    if (Date.now() > deadline - 175000 || signal.aborted) break;
+    if (
+      Date.now() > deadline - 175000 ||
+      !hasDeadlineBudget(deadline, CONSUMER_WORK_RESERVE_MS) ||
+      signal.aborted
+    )
+      break;
     const parsed = Message.safeParse(message.message);
     if (!parsed.success) {
       await db.rpc("ack_document_queue", { p_message: message.msg_id });
@@ -148,15 +159,20 @@ export async function consumeDocuments(deadline = Date.now() + 220000) {
       };
       const result =
         extraction.quality === "readable"
-          ? await assess(ready, batch.rubric, async () => {
-              const { data: current, error } = await db
-                .from("workspaces")
-                .select("settings")
-                .eq("id", d.workspace_id)
-                .single();
-              if (error || !current || current.settings?.paused)
-                throw new Error("PROCESSING_PAUSED");
-            }, signal)
+          ? await assess(
+              ready,
+              batch.rubric,
+              async () => {
+                const { data: current, error } = await db
+                  .from("workspaces")
+                  .select("settings")
+                  .eq("id", d.workspace_id)
+                  .single();
+                if (error || !current || current.settings?.paused)
+                  throw new Error("PROCESSING_PAUSED");
+              },
+              signal,
+            )
           : { assessments: {}, outputs: [], usage: [] };
       signal.throwIfAborted();
       ready.assessments = result.assessments;
