@@ -228,7 +228,7 @@ export function WorkspaceApp() {
       />
     );
   else if (route.view === "admin")
-    page = isAdmin ? (
+    page = isAdmin && !state?.temporaryPublic ? (
       <Administration />
     ) : (
       <>
@@ -408,7 +408,7 @@ export function WorkspaceApp() {
       <Sidebar
         vacancies={state?.vacancies ?? []}
         route={route}
-        isAdmin={isAdmin}
+        isAdmin={isAdmin && !state?.temporaryPublic}
         role={state?.role ?? "reviewer"}
         canSignOut={state?.mode === "Supabase synthetic"}
         navigate={navigate}
@@ -421,6 +421,7 @@ export function WorkspaceApp() {
             <span>
               <strong>Synthetic proof of concept.</strong> Fictional CVs only.
               Real applicant data is disabled.
+              {state?.temporaryPublic && " Temporary access: no sign-in required."}
             </span>
           </span>
           <span className="save-status" role="status">
