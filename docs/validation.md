@@ -18,3 +18,5 @@ Persistent local browser acceptance passed with real MFA, private PDF/DOCX uploa
 The same persistent browser workflow also passed with OpenAI enabled: each uploaded PDF/DOCX produced two non-null structured passes with recorded token usage and the pinned gpt-6-luna configuration. Human review still determined the final scores and selection.
 
 Remote CI caught low contrast in stacked Saved notifications while their content faded. The opacity rule now covers every toast’s content, preserving readable text during stacked transitions; the accessibility checks remain enabled.
+
+GitHub pull-request secret scanning required its built-in read-only GITHUB_TOKEN; the workflow now supplies it with contents/pull-requests read permissions. Push scanning had already passed; no external secret or token was committed.
