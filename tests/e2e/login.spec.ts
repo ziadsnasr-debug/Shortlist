@@ -76,8 +76,8 @@ test("mfa steps use one six digit input, accept pasted codes and never auto-subm
   ).toBeVisible();
   await page.getByRole("button", { name: "Set up authenticator" }).click();
   await expect(page.getByAltText("Authenticator setup QR")).toBeVisible();
-  await page.getByText("Can't scan? Enter this key manually").click();
-  await expect(page.getByText("ABCD EFGH JKLM NOPQ")).toBeVisible();
+  await page.getByText("Can’t scan? Enter a setup key instead").click();
+  await expect(page.getByText("ABCDEFGHJKLMNOPQ")).toBeVisible();
 
   const code = page.getByLabel("Six digit authenticator code");
   await expect(code).toHaveCount(1);

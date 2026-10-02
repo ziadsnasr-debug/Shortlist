@@ -27,8 +27,6 @@ const FRIENDLY_FALLBACK: Record<string, string> = {
 const NETWORK_ERROR =
   "Could not reach the server. Check your connection and try again.";
 
-const group = (secret: string) => (secret.match(/.{1,4}/g) ?? []).join(" ");
-
 export default function Login() {
   const router = useRouter();
   const [factor, setFactor] = useState<string | null>(null),
@@ -262,7 +260,11 @@ export default function Login() {
                     --sidebar-foreground is the one token that is light in both. */}
                 <div className="w-fit rounded-lg bg-sidebar-foreground p-3">
                   <img
-                    src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(qr)}`}
+                    src={
+                      qr.startsWith("data:image/")
+                        ? qr
+                        : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qr)}`
+                    }
                     alt="Authenticator setup QR"
                     width="200"
                     height="200"
@@ -277,14 +279,14 @@ export default function Login() {
                         aria-hidden="true"
                         className="size-4 transition-transform duration-(--dur-fast) ease-(--ease-out) group-open:rotate-90 motion-reduce:transition-none"
                       />
-                      Can&apos;t scan? Enter this key manually
+                      Can’t scan? Enter a setup key instead
                     </summary>
                     <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center">
                       <code
                         ref={secretText}
                         className="block flex-1 rounded-md border border-input bg-surface-2 px-3 py-2 font-mono text-sm tracking-wider break-words text-foreground select-all"
                       >
-                        {group(secret)}
+                        {secret}
                       </code>
                       <Button
                         type="button"
