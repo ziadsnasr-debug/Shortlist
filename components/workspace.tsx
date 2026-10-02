@@ -75,14 +75,14 @@ function savedMessage(action: Action, next: State) {
   }
 }
 
-export function WorkspaceApp() {
+export function WorkspaceApp({ initial = null }: { initial?: State | null }) {
   const pathname = usePathname();
   // The path is the source of truth for location. It only diverges from the
   // browser's pathname while a back/forward move is refused for unsaved work.
   const [path, setPath] = useState(pathname);
   const [unsaved, setUnsaved] = useState(false);
   const unsavedRef = useRef(false);
-  const [state, setState] = useState<State | null>(null),
+  const [state, setState] = useState<State | null>(initial),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [help, setHelp] = useState(false),
@@ -133,8 +133,10 @@ export function WorkspaceApp() {
       setError((e as Error).message);
     }
   }, []);
+  // Server-rendered data is current on arrival; fetch only without it.
+  const hadInitial = useRef(initial !== null);
   useEffect(() => {
-    void load();
+    if (!hadInitial.current) void load();
   }, [load]);
   const refresh = useCallback(() => {
     void load();
