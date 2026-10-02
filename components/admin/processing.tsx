@@ -167,7 +167,7 @@ export function ProcessingTab({
               Monthly processing allowance
             </h3>
             <p className="text-sm text-muted-foreground">
-              Includes AI criteria drafts, processing attempts and retries, even
+              Includes queued uploads, AI criteria drafts, processing attempts and retries, even
               when processing fails. This is not a completed-CV count or spend.
               The period is based on UTC.
             </p>

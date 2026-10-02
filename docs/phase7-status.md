@@ -1,6 +1,6 @@
 # Phase 7 — Processing allowance visibility
 
-Administration privately reads the workspace’s current UTC-month processing allowance and the validated runtime cap. It shows used, limit and remaining units, an 80% near-limit notice and an exhausted notice. Missing rows legitimately start at zero; failed or invalid reads do not fabricate usage. Legacy responses display unavailable. Counts include admitted processing attempts, retries, failed processing and AI criteria drafts; they are not monetary spend. New allowance does not automatically retry attention files.
+Administration privately reads the workspace’s current UTC-month processing allowance and the validated runtime cap. It shows used, limit and remaining units, an 80% near-limit notice and an exhausted notice. Missing rows legitimately start at zero; failed or invalid reads do not fabricate usage. Legacy responses display unavailable. Counts include queued uploads, admitted processing attempts, retries, failed processing and AI criteria drafts; they are not monetary spend. New allowance does not automatically retry attention files.
 
 No migration, grant, external notification, paid resource or provider change was introduced. The hosted database timezone was verified as UTC; fresh deployments must retain that period convention. Provider spend alerts and customer-approved notification destinations remain separate operational setup.
 
