@@ -26,6 +26,10 @@ A Claude or ChatGPT subscription used for advice does not supply an OpenAI API k
 
 Run static configuration preflight explicitly with private values loaded: `node --env-file=.env.local --import tsx scripts/preflight.ts --check`. The administrator-only `/api/readiness` returns names/statuses with private no-store headers. Passing is configuration evidence, not live dependency verification, production approval or real-data activation.
 
+Preflight also checks active temporary fictional public access: synthetic persistence, explicit real-data refusal, expiry and actor format. An expired valid pilot returns to normal authentication. It does not verify the actor's current membership; live requests enforce membership.
+
+For public HTTP checks, set `SHORTLIST_HOSTED_URL` to the exact approved HTTPS origin and run `npm run test:hosted-smoke`. Normal mode expects a login page and protected readiness. Only during an approved active fictional public pilot add `HOSTED_EXPECT_TEMPORARY_PUBLIC=true`; this explicitly expects the app redirect and denies readiness, administration and retention. A mode mismatch fails. These checks perform no writes or inference and do not establish model quality or MFA coverage.
+
 `LOCAL_AUTH_BYPASS` defaults false; temporary synthetic loopback convenience only. `LOCAL_AUTH_USER_ID` selects an existing local member through private configuration, not a browser parameter. Hosted/staging/production/remote origins refuse it; membership revocation and role enforcement remain active. Authentication test servers explicitly disable it.
 
 Temporary hosted fictional access is separate from the local bypass: `TEMP_PUBLIC_ACCESS=false` by default. An explicitly enabled shared pilot requires a future ISO `TEMP_PUBLIC_ACCESS_UNTIL`, a dedicated active member `TEMP_PUBLIC_ACTOR_ID`, hosted synthetic persistence and `REAL_CV_DATA_ENABLED=false`. Administration, invitations, readiness and retention routes deny this mode. Expiry restores account/MFA access; set false and redeploy to end it early. Never share real applicant data through this mode.
