@@ -1,10 +1,11 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import { Category } from "./workflow";
 export const EvaluationRow = z
   .object({
-    fixtureId: z.string(),
-    role: z.string(),
-    criterionId: z.string(),
+    fixtureId: z.string().min(1),
+    role: z.string().min(1),
+    criterionId: z.string().min(1),
     expected: Category,
     actual: Category.nullable(),
     validSupport: z.boolean(),
@@ -15,55 +16,52 @@ export const EvaluationRow = z
   })
   .strict();
 export type EvaluationRow = z.infer<typeof EvaluationRow>;
+export function digest(value: unknown) {
+  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
 export function evaluate(input: unknown) {
-  const rows = z.array(EvaluationRow).min(1).parse(input);
-  const keys = rows.map((r) => `${r.fixtureId}:${r.criterionId}`);
+  const rows = z.array(EvaluationRow).min(1).parse(input),
+    keys = rows.map((r) => `${r.fixtureId}:${r.criterionId}`);
   if (new Set(keys).size !== keys.length)
     throw new Error("Duplicate evaluation rows.");
   const exact = rows.filter((r) => r.actual === r.expected).length,
     unsupported = rows.filter(
       (r) => ["FULL", "PARTIAL"].includes(r.actual ?? "") && !r.validSupport,
-    ).length;
-  const perRole = Object.fromEntries(
-    [...new Set(rows.map((r) => r.role))].map((role) => {
-      const subset = rows.filter((r) => r.role === role);
-      return [
-        role,
-        {
-          count: subset.length,
-          agreement:
-            subset.filter((r) => r.actual === r.expected).length /
-            subset.length,
-        },
-      ];
-    }),
-  );
-  const perCategory = Object.fromEntries(
-    Category.options.map((c) => {
-      const subset = rows.filter((r) => r.expected === c);
-      return [
-        c,
-        {
-          count: subset.length,
-          exact: subset.filter((r) => r.actual === c).length,
-        },
-      ];
-    }),
-  );
+    ).length,
+    perRole = Object.fromEntries(
+      [...new Set(rows.map((r) => r.role))].map((role) => {
+        const s = rows.filter((r) => r.role === role);
+        return [
+          role,
+          {
+            count: s.length,
+            agreement:
+              s.filter((r) => r.actual === r.expected).length / s.length,
+          },
+        ];
+      }),
+    );
   return {
     count: rows.length,
     agreement: exact / rows.length,
     perRole,
-    perCategory,
+    perCategory: Object.fromEntries(
+      Category.options.map((c) => [
+        c,
+        {
+          count: rows.filter((r) => r.expected === c).length,
+          exact: rows.filter((r) => r.expected === c && r.actual === c).length,
+        },
+      ]),
+    ),
     invalidOrMissing: rows.filter((r) => r.actual === null).length,
     unsupported,
     essentialUnreviewed: rows.filter((r) => r.essential && !r.essentialReviewed)
       .length,
-    proposedQualityThresholdsMet:
-      exact / rows.length >= 0.85 &&
-      Object.values(perRole).every((r) => r.agreement >= 0.8) &&
-      unsupported === 0 &&
-      rows.every((r) => !r.essential || r.essentialReviewed),
+    proposedQualityThresholdsMet: false,
+    releaseStatus: "not_assessed" as const,
+    releaseReason:
+      "Rows alone cannot establish frozen coverage, configuration, independent evidence or release approval.",
   };
 }
 export function repeatability(runs: (Category | null)[][]) {

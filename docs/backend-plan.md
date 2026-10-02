@@ -26,13 +26,13 @@ Retry generations fence attempts and completion even when logical configuration 
 
 The deployed Vercel app cannot connect to a developer’s local loopback database. An isolated reachable hosted backend now exists for synthetic acceptance; the public surface and complete authenticated upload-to-export workflow have passed fictional acceptance. No tunnel, unrelated database migration or paid project is introduced. Staging and production need separate accounts/projects/secrets, regional/retention verification, approved authentication sender and a named incident owner.
 
-Before real CV activation, implement and exercise the customer-approved retention/hold lifecycle across originals, text, outputs, exports and backups. The current retention field records policy; it is not an automatic purge scheduler. A lawful hold workflow, independently tested restore and hosted monitoring/alerts remain deployment work. An automatic purge must not be invented before the customer defines holds, scope and retention.
+Before real CV activation, implement and exercise the customer-approved retention/hold lifecycle across originals, text, outputs, exports and backups. Versioned hypothetical retention drafts and auditable holds are implemented and tested; automation is constrained off. Local restore preserves current holds and deletions. Customer-authorised scheduling, independent hosted restore and monitoring/alerts remain deployment work. An automatic purge must not be invented before the customer defines holds, scope and retention.
 
 ## Feature priorities after acceptance inputs
 
 1. Approved retention/hold administration and an auditable scheduled lifecycle, including export/backup responsibilities.
-2. Private operational dashboard with queue age, errors and deletion due times; alerts to an approved destination after explicit notification authorization.
-3. Saved vacancy templates and clearer bulk-upload progress, preserving versioned published rubrics and every-application review.
+2. Private operational dashboard with processing attempts, reservation age, safe errors and earliest deletion completion times; alerts to an approved destination after explicit notification authorization.
+3. Built-in reusable editable role suggestions (user-saved libraries deferred) and clearer bulk-upload progress, preserving versioned published rubrics and every-application review.
 4. Reviewer-labelled evaluation runner with frozen thresholds, support audit and model/prompt/parser change gates.
 5. Optional Jev classification experiment only if independent evidence demonstrates acceptable support and ambiguity handling. Keep one approved production route; no confidence-as-score or silent fallback.
 

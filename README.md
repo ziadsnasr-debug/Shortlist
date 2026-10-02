@@ -6,7 +6,7 @@ Criteria → Add CVs → Review → Shortlist. Configurable published 100-point 
 
 ## Local workflow
 
-Node 22+; `npm ci`, `npm run dev -- --port 3218`; open http://127.0.0.1:3218. No cloud keys needed for six fictional sample CVs. Local server-only JSON is a synthetic demonstration, not production ownership.
+Node 22.x; `npm ci`, `npm run dev -- --port 3218`; open http://127.0.0.1:3218. No cloud keys needed for six fictional sample CVs. Local server-only JSON is a synthetic demonstration, not production ownership.
 
 ## Persistent local app
 
@@ -14,7 +14,7 @@ Start isolated local Supabase using `supabase start`, then `npm run local:setup`
 
 Link your own Vercel project, pull its development OIDC into ignored `.env.vercel-auth.local`, build/create the parser snapshot and pin its metadata in `.env.local`. Run `npm run build` then `npm run local:start`. Originals stay in your local folder; uploads are private local Supabase copies, temporarily parsed in Vercel. OpenAI receives minimised text. Review every CV before selecting up to three suggestions.
 
-The dedicated Vercel project is prepared; the working persistent app runs locally because the backend is local; a separate hosted preview has no connected backend. Fresh hosted deployment requires a separately authorized backend. See `docs/deployment.md`.
+Both the persistent local app and a dedicated free hosted synthetic instance are available. The hosted fictional pilot has passed complete upload-to-export acceptance; details and temporary public-access limits are in `docs/hosted-setup.md`. Fresh customer deployment uses separate accounts and keys as described in `docs/deployment.md`. Real CVs remain disabled.
 
 ## Checks and tooling
 
@@ -22,7 +22,7 @@ The dedicated Vercel project is prepared; the working persistent app runs locall
 
 `npm run parser:build` creates dependency-only bundle/hash. `npm run parser:snapshot` requires the intended authenticated Vercel project and executes isolation probes. `npm run provider:spike` requires an approved direct API key/exact model and fictional data. Actual parser isolation probes and the live OpenAI two-pass synthetic spike passed; semantic accuracy and customer acceptance remain pending.
 
-`npm run evaluation` generates 45 fixtures/20 pairs and label template under ignored outputs/evaluation. `npm run evaluation -- <independent-labelled-results.json>` computes metrics, not full release approval.
+`npm run evaluation` generates the unassessed 45-fixture/20-pair fictional pack under ignored outputs/evaluation; writes refuse overwrite. Use `EVALUATION_OUTPUT_DIR` for a fresh run directory. `npm run evaluation -- metrics <independent-labelled-results.json>` computes descriptive metrics. Frozen `seal`/`assess` commands require complete independent records and a separately retained release digest; see `docs/phase4-evaluation.md`. Mock evidence never passes release assessment.
 
 `npm run backup`, `npm run ledger:export` and `npm run restore` support protected synthetic-only recovery; read deployment guide before use.
 

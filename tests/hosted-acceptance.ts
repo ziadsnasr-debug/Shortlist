@@ -152,8 +152,9 @@ try {
   );
   expect([401, 403]).toContain(anonymousReadiness.status());
   if (publicPilot) {
+    stage = "browser-public-pilot-redirect";
     await page.goto(origin + "/login");
-    await expect(page).toHaveURL(origin + "/");
+    await expect(page).toHaveURL(/\/(?:vacancies)?$/);
   } else {
     stage = "browser-mfa-open-login";
     await page.goto(origin + "/login");
