@@ -35,3 +35,5 @@ Local tests do not establish hosted isolation, model accuracy, human usefulness 
 Backend priorities and remaining exit gates: docs/backend-plan.md. Static private configuration preflight is available through scripts/preflight.ts (`--check`); keys are never included in its output.
 
 Developer-only Jev comparison: docs/jev-evaluation.md. The active evidence provider remains OpenAI; the experiment never switches deployment configuration.
+
+Temporary local-only login bypass: set `LOCAL_AUTH_BYPASS=true` and `LOCAL_AUTH_USER_ID` to an existing local administrator UUID in ignored `.env.local`. Requires local environment and loopback app/database origins; active membership and roles are still checked. Set bypass false to restore login/MFA. Never use with real CVs or hosted deployments.

@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { localBypassHostAllowed } from "./lib/local-access";
 export function proxy(req: NextRequest) {
+  if (
+    !localBypassHostAllowed(
+      req.headers.get("host"),
+      req.headers.get("x-forwarded-host"),
+    )
+  )
+    return NextResponse.json(
+      { error: "Local request host denied." },
+      { status: 403, headers: { "Cache-Control": "private, no-store" } },
+    );
   const nonce = btoa(crypto.randomUUID());
   const dev = process.env.NODE_ENV !== "production";
-  const storageOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin : "";
+  const storageOrigin = process.env.NEXT_PUBLIC_SUPABASE_URL
+    ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin
+    : "";
   const csp = `default-src 'self'; script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${dev ? " 'unsafe-eval'" : ""}; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ${storageOrigin}${dev ? " ws: wss:" : ""}; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'`;
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-nonce", nonce);
