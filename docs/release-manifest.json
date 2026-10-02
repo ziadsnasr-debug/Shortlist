@@ -1,6 +1,6 @@
 {
-  "release": "0.3.0",
-  "commit": "8fe600139e265131b22f2677c213f840f1a40281",
+  "release": "0.4.0",
+  "commit": "79c906af6aa187685e5ce246ab55bb0b1685a48f",
   "runtime": "v26.5.0",
   "dependencies": {
     "@ai-sdk/openai": "4.0.83",

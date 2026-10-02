@@ -28,7 +28,8 @@
     "local:authenticator": "node --env-file=.env.local --import tsx scripts/local-authenticator.ts",
     "test:live-local": "tsx tests/live-local.ts",
     "preflight": "tsx scripts/preflight.ts --check",
-    "test:recovery": "tsx tests/recovery-integration.ts"
+    "test:recovery": "tsx tests/recovery-integration.ts",
+    "benchmark:jev": "node --conditions=react-server --import tsx scripts/benchmark/run.ts"
   },
   "keywords": [],
   "author": "",
