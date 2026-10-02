@@ -7,6 +7,10 @@ import {
   ListChecks,
   Plus,
   ShieldCheck,
+  BriefcaseBusiness,
+  CircleHelp,
+  Settings2,
+  ArrowUpRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -41,6 +45,12 @@ import {
 } from "@/lib/workflow";
 import { DocumentIntake } from "./document-intake";
 import { Administration } from "./administration";
+import {
+  WeightChart,
+  BatchProgress,
+  ScoreBar,
+  EvidenceComparison,
+} from "./workspace-insights";
 import { sampleRubric } from "@/fixtures/synthetic/seed";
 type PublicApp = Omit<Application, "name"> & {
   name?: string;
@@ -136,18 +146,28 @@ export function WorkspaceApp() {
     const b = v.batches.at(-1)!;
     setVacancyId(v.id);
     setBatchId(b.id);
+    setAdmin(false);
     setHome(false);
     setReveal(false);
     setStep(b.snapshot ? 3 : b.closed ? 2 : b.published ? 1 : 0);
   }
   return (
     <div className="shell">
+      <a className="skip-link" href="#main-content">
+        Skip to workspace
+      </a>
       <aside className="sidebar">
         <div className="brand">
           <span className="brandmark">
             <ListChecks aria-hidden="true" />
           </span>
           Shortlist
+        </div>
+        <div className="workspace-label">
+          <span className="workspace-avatar">S</span>
+          <div>
+            Recruiter workspace<small>Evidence first. You decide.</small>
+          </div>
         </div>
         <nav aria-label="Main navigation">
           <Button
@@ -157,10 +177,11 @@ export function WorkspaceApp() {
                 toast.info("Save your draft before leaving this step.");
                 return;
               }
+              setAdmin(false);
               setHome(true);
             }}
           >
-            Vacancies
+            <BriefcaseBusiness aria-hidden="true" /> Vacancies
           </Button>
           <Button
             variant="ghost"
@@ -189,20 +210,40 @@ export function WorkspaceApp() {
           ))}
         </div>
         <div className="sidefoot">
-          <strong>Recruiter workspace</strong>
-          <p>Evidence first. You decide.</p>
+          <span className="eyebrow">YOUR WORKSPACE</span>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              if (unsaved) {
+                toast.info("Save your draft before leaving this step.");
+                return;
+              }
+              setAdmin(true);
+            }}
+          >
+            <Settings2 aria-hidden="true" />
+            Administration
+          </Button>
           <Button variant="ghost" onClick={() => setHelp(true)}>
-            How it works
+            <CircleHelp aria-hidden="true" /> How it works
           </Button>
         </div>
       </aside>
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <div className="demo-banner">
           <span>
             <strong>Synthetic POC.</strong> Fictional CVs only. Real applicant
             data remains disabled.
           </span>
-          <span>{state?.mode ?? "Connecting"}</span>
+          <span className="save-status" role="status">
+            {busy
+              ? "Saving changes…"
+              : unsaved
+                ? "Unsaved changes"
+                : state
+                  ? "Workspace ready"
+                  : "Connecting…"}
+          </span>
         </div>
         <div className="page">
           {error ? (
@@ -217,7 +258,14 @@ export function WorkspaceApp() {
               </div>
             </Panel>
           ) : !state || !vacancy || !batch ? (
-            <p role="status">Loading your workspace…</p>
+            <div className="workspace-loading" role="status">
+              <span className="eyebrow">SHORTLIST</span>
+              <h1>Preparing your workspace</h1>
+              <p>Your criteria, applications and review progress.</p>
+              <div className="loading-line" />
+              <div className="loading-line" />
+              <span className="sr-only">Loading your workspace…</span>
+            </div>
           ) : admin ? (
             <>
               <Button variant="outline" onClick={() => setAdmin(false)}>
@@ -227,11 +275,16 @@ export function WorkspaceApp() {
             </>
           ) : home ? (
             <>
-              <Button variant="outline" onClick={() => setAdmin(true)}>
+              <Button
+                className="mobile-admin"
+                variant="outline"
+                onClick={() => setAdmin(true)}
+              >
                 Administration
               </Button>
               <header className="pagehead">
                 <div>
+                  <span className="eyebrow">WORKSPACE OVERVIEW</span>
                   <h1>Your vacancies</h1>
                   <p>Set criteria. Check evidence. Choose your shortlist.</p>
                 </div>
@@ -248,6 +301,11 @@ export function WorkspaceApp() {
                   <Plus data-icon="inline-end" />
                 </Button>
               </header>
+              <BatchProgress
+                applications={state.vacancies.flatMap(
+                  (v) => v.batches.at(-1)?.applications ?? [],
+                )}
+              />
               <Panel>
                 {state.vacancies.map((v) => (
                   <div className="vacancy-row" key={v.id}>
@@ -267,7 +325,7 @@ export function WorkspaceApp() {
                     </Badge>
                     <Button variant="outline" onClick={() => open(v)}>
                       Continue
-                      <ArrowRight data-icon="inline-end" />
+                      <ArrowUpRight data-icon="inline-end" />
                     </Button>
                   </div>
                 ))}
@@ -292,6 +350,7 @@ export function WorkspaceApp() {
               </div>
               <header className="pagehead">
                 <div>
+                  <span className="eyebrow">HIRING WORKSPACE</span>
                   <h1>{vacancy.title}</h1>
                   <p>
                     {batch.label} ·{" "}
@@ -373,60 +432,63 @@ export function WorkspaceApp() {
                   );
                 })}
               </nav>
-              {step === 0 && (
-                <Criteria
-                  ai={state.capabilities?.ai ?? false}
-                  key={`${batch.id}-${batch.published}`}
-                  vacancy={vacancy}
-                  batch={batch}
-                  send={send}
-                  busy={busy}
-                  onDirty={setUnsaved}
-                  onNext={() => setStep(1)}
-                />
-              )}
-              {step === 1 && (
-                <Intake
-                  vacancy={vacancy}
-                  batch={batch}
-                  send={send}
-                  busy={busy}
-                  onNext={() => setStep(2)}
-                  onRefresh={refresh}
-                  version={state.version}
-                  uploads={state.capabilities?.uploads ?? false}
-                />
-              )}
-              {step === 2 && (
-                <Review
-                  key={batch.id}
-                  vacancy={vacancy}
-                  batch={batch}
-                  send={send}
-                  busy={busy}
-                  onDirty={setUnsaved}
-                  onNext={() => setStep(3)}
-                />
-              )}
-              {step === 3 && (
-                <Shortlist
-                  key={`${batch.id}-${!!batch.snapshot}`}
-                  vacancy={vacancy}
-                  batch={batch}
-                  send={send}
-                  busy={busy}
-                  onDirty={setUnsaved}
-                  reveal={reveal}
-                  onReveal={() => {
-                    setReveal(!reveal);
-                    void load(!reveal);
-                  }}
-                  onNew={(b) => {
-                    setBatchId(b.id);
-                    setStep(0);
-                  }}
-                />
-              )}
+              {step > 0 && <BatchProgress applications={batch.applications} />}
+              <div className="workflow-content" key={`${batch.id}-${step}`}>
+                {step === 0 && (
+                  <Criteria
+                    ai={state.capabilities?.ai ?? false}
+                    key={`${batch.id}-${batch.published}`}
+                    vacancy={vacancy}
+                    batch={batch}
+                    send={send}
+                    busy={busy}
+                    onDirty={setUnsaved}
+                    onNext={() => setStep(1)}
+                  />
+                )}
+                {step === 1 && (
+                  <Intake
+                    vacancy={vacancy}
+                    batch={batch}
+                    send={send}
+                    busy={busy}
+                    onNext={() => setStep(2)}
+                    onRefresh={refresh}
+                    version={state.version}
+                    uploads={state.capabilities?.uploads ?? false}
+                  />
+                )}
+                {step === 2 && (
+                  <Review
+                    key={batch.id}
+                    vacancy={vacancy}
+                    batch={batch}
+                    send={send}
+                    busy={busy}
+                    onDirty={setUnsaved}
+                    onNext={() => setStep(3)}
+                  />
+                )}
+                {step === 3 && (
+                  <Shortlist
+                    key={`${batch.id}-${!!batch.snapshot}`}
+                    vacancy={vacancy}
+                    batch={batch}
+                    send={send}
+                    busy={busy}
+                    onDirty={setUnsaved}
+                    reveal={reveal}
+                    onReveal={() => {
+                      setReveal(!reveal);
+                      void load(!reveal);
+                    }}
+                    onNew={(b) => {
+                      setBatchId(b.id);
+                      setStep(0);
+                    }}
+                  />
+                )}
+              </div>
             </>
           )}
         </div>
@@ -559,6 +621,7 @@ function Criteria({
         </div>
         <Badge variant="secondary">{total} / 100 points</Badge>
       </div>
+      <WeightChart rubric={rubric} />
       {!batch.published && (
         <Notice>
           Criteria suggestions are editable examples, not AI output. Employer
@@ -1226,7 +1289,17 @@ function ReviewForm({
                             <button
                               className="quote"
                               key={id}
-                              onClick={() => setFocus(id)}
+                              onClick={() => {
+                                setFocus(id);
+                                const source = document.getElementById(
+                                  `source-${id}`,
+                                );
+                                source?.focus({ preventScroll: true });
+                                source?.scrollIntoView({
+                                  block: "nearest",
+                                  behavior: "instant",
+                                });
+                              }}
                             >
                               <small>
                                 {block.locator} · {block.id}
@@ -1319,13 +1392,20 @@ function ReviewForm({
               originals are available in Add CVs for checking.
             </p>
           </div>
-          <div className="source-body">
+          <div
+            className="source-body"
+            role="region"
+            aria-label="Source passages"
+            tabIndex={0}
+          >
             {app.blocks.map((b) => (
               <div
                 className={
                   focus === b.id ? "source-block highlighted" : "source-block"
                 }
                 key={b.id}
+                id={`source-${b.id}`}
+                tabIndex={-1}
               >
                 <small>
                   {b.locator} · {b.id}
@@ -1491,6 +1571,7 @@ function Shortlist({
               />
               <div>
                 <h3>{reveal ? app.name : row.id}</h3>
+                <ScoreBar score={row.score} />
                 <p>
                   {row.essentials.length
                     ? `Essential requirements not fully evidenced: ${row.essentials.join(", ")}`
@@ -1533,8 +1614,12 @@ function Shortlist({
           </div>
         )}
       </Panel>
+      <EvidenceComparison
+        rubric={batch.rubric}
+        applications={batch.applications.filter((a) => selected.includes(a.id))}
+      />
       {!batch.snapshot && (
-        <div className="actions my-5">
+        <div className="actions selection-tray my-5">
           <Button
             variant="outline"
             onClick={() => {
