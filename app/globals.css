@@ -702,6 +702,6 @@ textarea {
   opacity: 1 !important;
   color: #172b4d;
 }
-[data-sonner-toast][data-front="true"] [data-content] {
+[data-sonner-toast] [data-content] {
   opacity: 1 !important;
 }

@@ -11,7 +11,7 @@ Use `.env.example`; never commit actual values. Separate customer-owned staging/
 | WORKSPACE_ID | Workspace selected on server after verified membership |
 | NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY | Public connection configuration; grants/RLS still restrict data |
 | SUPABASE_SERVICE_ROLE_KEY | Privileged server/setup only; never browser |
-| AI_ENABLED / ANTHROPIC_API_KEY / AI_MODEL_ID | Direct synthetic inference, disabled by default; exact tested ID required |
+| AI_ENABLED / OPENAI_API_KEY / AI_MODEL_ID | Direct OpenAI synthetic inference, disabled by default; exact tested ID required |
 | MONTHLY_PROCESSING_ALLOWANCE | Default 240 units; reservation, each attempt and each criteria draft consumes one. Not a supplier currency quote |
 | PARSER_SNAPSHOT_ID / PARSER_BUNDLE_SHA256 | Exact dependency-only snapshot and verified bundle hash |
 | VERCEL_OIDC_TOKEN | Sandbox controller authentication on Vercel; never parser env |
@@ -22,4 +22,4 @@ Use `.env.example`; never commit actual values. Separate customer-owned staging/
 
 At most two 4,000-output-token calls per attempt, three automatic attempts, bounded input and monthly counters prevent unbounded processing. Manual retries consume the same allowance on each attempt. Set vendor spend limits/alerts and customer-approved budgets too. Counter configuration changes must be reviewed; this is not a guarantee of a particular bill.
 
-A Claude subscription used for advice does not supply an Anthropic API key. Provider keys are consumed only by the configured direct route; no substitution with CLI assessment or OAuth credentials.
+A Claude or ChatGPT subscription used for advice does not supply an OpenAI API key. Provider keys are consumed only by the configured direct route; no substitution with CLI assessment or OAuth credentials.
