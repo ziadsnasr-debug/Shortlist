@@ -708,11 +708,11 @@ textarea {
 }
 
 /* Keep notification text readable throughout entrance motion. */
-[data-sonner-toast][data-styled="true"] {
+[data-sonner-toast][data-styled="true"][data-visible="true"] {
   opacity: 1 !important;
   color: #20242c;
 }
-[data-sonner-toast][data-front="true"] [data-content] {
+[data-sonner-toast][data-visible="true"] [data-content] {
   opacity: 1 !important;
 }
 
@@ -1388,4 +1388,10 @@ select:focus-visible {
   .workspace-label {
     display: none;
   }
+}
+
+/* Hidden/removed notifications must not leak faded text from the stack. */
+[data-sonner-toast][data-visible="false"],
+[data-sonner-toast][data-removed="true"] {
+  visibility: hidden;
 }
