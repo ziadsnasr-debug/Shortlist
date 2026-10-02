@@ -586,7 +586,7 @@ export function ReviewForm({
                   onClick={previous}
                 >
                   <ArrowLeft data-icon="inline-start" />
-                  Previous
+                  <span className="prev-label">Previous</span>
                 </Button>
                 {locked ? (
                   <Button onClick={() => next()}>Next CV</Button>

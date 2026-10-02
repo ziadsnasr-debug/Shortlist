@@ -49,8 +49,14 @@ async function mock(page: Page, paused = false) {
   );
 }
 
-const axe = async (page: Page) =>
-  (await new AxeBuilder({ page }).analyze()).violations;
+// Scan only once overlays have finished animating in; mid-fade text would
+// report a false contrast failure.
+const axe = async (page: Page) => {
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => a.playState !== "running"),
+  );
+  return (await new AxeBuilder({ page }).analyze()).violations;
+};
 
 test("local synthetic mode explains that administration needs the hosted workspace", async ({
   page,

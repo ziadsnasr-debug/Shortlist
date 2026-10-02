@@ -63,7 +63,8 @@ test("source links focus actual passage; reduced motion and review gates remain 
   await expect(page.locator(".source-block.highlighted")).toBeInViewport();
   expect(
     await page
-      .locator(".progress-track span")
+      .locator(".steps .step")
+      .first()
       .evaluate((el) => getComputedStyle(el).transitionDuration),
   ).toBe("0s");
   await expect(
