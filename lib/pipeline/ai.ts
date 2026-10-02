@@ -21,7 +21,9 @@ export async function assess(
   app: Application,
   rubric: Criterion[],
   beforePass?: () => Promise<void>,
+  signal?: AbortSignal,
 ) {
+  signal?.throwIfAborted();
   const config = aiSettings();
   if (!config)
     return {
@@ -46,7 +48,9 @@ export async function assess(
   const outputs: unknown[] = [],
     usage: unknown[] = [];
   for (let pass = 0; pass < 2; pass++) {
+    signal?.throwIfAborted();
     await beforePass?.();
+    signal?.throwIfAborted();
     try {
       const result = await generateText({
         model: provider.responses(config.model),
@@ -54,7 +58,9 @@ export async function assess(
         prompt,
         output: Output.object({ schema: OutputSchema }),
         maxOutputTokens: config.maxOutputTokens,
-        abortSignal: AbortSignal.timeout(config.timeoutMs),
+        abortSignal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(config.timeoutMs)])
+          : AbortSignal.timeout(config.timeoutMs),
         maxRetries: 0,
         experimental_telemetry: { isEnabled: false },
         providerOptions: {
@@ -71,6 +77,7 @@ export async function assess(
         outputTokens: result.usage.outputTokens ?? 0,
       });
     } catch {
+      signal?.throwIfAborted();
       outputs.push(null);
       usage.push({ error: "INVALID_OR_UNAVAILABLE_PASS" });
     }

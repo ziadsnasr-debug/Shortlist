@@ -2,12 +2,14 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { boundedFetch } from "./bounded-fetch";
 export async function sessionClient() {
   const jar = await cookies();
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
     key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) throw new Error("Supabase environment is incomplete.");
   return createServerClient(url, key, {
+    global: { fetch: boundedFetch() },
     cookies: {
       getAll: () => jar.getAll(),
       setAll: (values) =>
@@ -24,11 +26,12 @@ export async function sessionClient() {
     },
   });
 }
-export function databaseClient() {
+export function databaseClient(absoluteDeadline?: number) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
     key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error("Supabase environment is incomplete.");
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: { fetch: boundedFetch(15_000, fetch, absoluteDeadline) },
   });
 }

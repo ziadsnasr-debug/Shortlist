@@ -1,6 +1,6 @@
 {
   "name": "shortlist",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Shortlist synthetic workflow POC",
   "directories": {
     "doc": "docs"
@@ -26,7 +26,9 @@
     "local:setup": "tsx scripts/local-setup.ts",
     "local:start": "node --env-file=.env.vercel-auth.local node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3218",
     "local:authenticator": "node --env-file=.env.local --import tsx scripts/local-authenticator.ts",
-    "test:live-local": "tsx tests/live-local.ts"
+    "test:live-local": "tsx tests/live-local.ts",
+    "preflight": "tsx scripts/preflight.ts --check",
+    "test:recovery": "tsx tests/recovery-integration.ts"
   },
   "keywords": [],
   "author": "",

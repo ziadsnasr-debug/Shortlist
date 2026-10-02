@@ -9,8 +9,12 @@ export function configuration() {
     throw new Error(
       "Hosted environments require Supabase ownership and persistence.",
     );
+  const allowance = Number(process.env.MONTHLY_PROCESSING_ALLOWANCE ?? 240);
+  if (!Number.isSafeInteger(allowance) || allowance < 1 || allowance > 1000)
+    throw new Error("Invalid processing allowance.");
   return {
     mode,
+    allowance,
     appUrl: process.env.APP_URL,
     ai: {
       enabled:

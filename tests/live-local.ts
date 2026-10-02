@@ -48,6 +48,10 @@ await writeFile(
   ),
 );
 try {
+  const anonymousReadiness = await context.request.get(
+    origin + "/api/readiness",
+  );
+  expect(anonymousReadiness.status()).toBe(401);
   await page.goto(origin + "/login");
   await page.getByLabel("Email", { exact: true }).fill(owner.email);
   await page.getByLabel("Password", { exact: true }).fill(owner.password);
@@ -63,6 +67,14 @@ try {
   await expect(
     page.getByRole("heading", { name: "Your vacancies" }),
   ).toBeVisible();
+  const privateReadiness = await context.request.get(origin + "/api/readiness");
+  expect(privateReadiness.status()).toBe(200);
+  expect(privateReadiness.headers()["cache-control"]).toBe("private, no-store");
+  const readiness = await privateReadiness.json();
+  expect(Object.keys(readiness).sort()).toEqual(["checks", "status"]);
+  expect(readiness.status).toBe("configuration_ready");
+  for (const check of readiness.checks)
+    expect(Object.keys(check).sort()).toEqual(["name", "status"]);
   async function state() {
     const r = await page.request.get(origin + "/api/workspace");
     expect(r.status()).toBe(200);

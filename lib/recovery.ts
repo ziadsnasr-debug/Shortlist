@@ -7,6 +7,16 @@ export function recordId(workspace: string, key: string) {
     .digest("hex");
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
+// Frozen snapshots retain historical attribution. Current records must not use
+// Auth UUIDs belonging only to the source installation.
+export function reconcileRestoreAttribution(state: Workspace) {
+  const result = structuredClone(state);
+  for (const vacancy of result.vacancies)
+    for (const batch of vacancy.batches)
+      for (const application of batch.applications)
+        delete application.reviewedBy;
+  return result;
+}
 export function reapplyDeletions(
   state: Workspace,
   workspace: string,

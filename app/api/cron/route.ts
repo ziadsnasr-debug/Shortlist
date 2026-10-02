@@ -18,8 +18,12 @@ export async function GET(req: NextRequest) {
       { status: 401, headers: privateHeaders },
     );
   try {
+    const deadline = Date.now() + 220000;
     return NextResponse.json(
-      { ...(await consumeDocuments()), deletions: await recoverDeletions() },
+      {
+        ...(await consumeDocuments(deadline)),
+        deletions: await recoverDeletions(deadline),
+      },
       { headers: privateHeaders },
     );
   } catch (e) {

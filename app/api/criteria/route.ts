@@ -6,6 +6,18 @@ import { owner, readState } from "@/lib/store";
 import { jsonBody, fail, privateHeaders } from "@/lib/http";
 import { draftCriteria } from "@/lib/pipeline/ai";
 import { WorkflowError } from "@/lib/workflow";
+import { configuration } from "@/lib/config";
+async function requireProcessing(workspaceId: string) {
+  const { data, error } = await databaseClient()
+    .from("workspaces")
+    .select("settings")
+    .eq("id", workspaceId)
+    .single();
+  if (error || !data || typeof data.settings?.paused !== "boolean")
+    throw new WorkflowError("Processing status unavailable.", 503);
+  if (data.settings.paused)
+    throw new WorkflowError("Workspace processing is paused.", 409);
+}
 export async function POST(req: NextRequest) {
   try {
     const input = await jsonBody(
@@ -27,14 +39,16 @@ export async function POST(req: NextRequest) {
       (v) => v.id === input.vacancyId,
     );
     if (!vacancy) throw new WorkflowError("Vacancy unavailable.", 404);
+    await requireProcessing(access.workspaceId);
     const { error: budget } = await databaseClient().rpc(
       "reserve_processing_budget",
       {
         p_workspace: access.workspaceId,
-        p_limit: Number(process.env.MONTHLY_PROCESSING_ALLOWANCE ?? 240),
+        p_limit: configuration().allowance,
       },
     );
     if (budget) throw new WorkflowError("Processing allowance exhausted.", 429);
+    await requireProcessing(access.workspaceId);
     return NextResponse.json(
       { rubric: await draftCriteria(vacancy.description), published: false },
       { headers: privateHeaders },
