@@ -1,4 +1,5 @@
 import { localBypassActor } from "./local-access";
+import { temporaryPublicActor } from "./temporary-access";
 export type ReadinessStatus = "pass" | "fail" | "not_applicable";
 export type ReadinessCheck = {
   name: string;
@@ -63,13 +64,23 @@ export function readiness(
   const aiEnabled = env.AI_ENABLED === "true";
   const allowanceOk = allowanceValid(env.MONTHLY_PROCESSING_ALLOWANCE);
   let bypassValid = true;
+  let temporaryAccessValid = true;
   try {
     localBypassActor(env);
   } catch {
     bypassValid = false;
   }
+  try {
+    temporaryPublicActor(env);
+  } catch {
+    temporaryAccessValid = false;
+  }
 
   const checks: ReadinessCheck[] = [
+    {
+      name: "temporary_public_access_configuration",
+      status: temporaryAccessValid ? "pass" : "fail",
+    },
     {
       name: "local_authentication_configuration",
       status: bypassValid ? "pass" : "fail",

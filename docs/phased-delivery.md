@@ -18,6 +18,10 @@ Implement auditable controls and dry-run preview with automation disabled. Custo
 
 Copy templates into unpublished rubrics with fresh IDs and existing validation; never propagate edits into published/finalised batches. Freeze fixture coverage, independent labels, configuration and approved thresholds in an immutable evaluation manifest. Missing labels, coverage, role evidence, repeated/adversarial runs or timings produce not-assessed, never passed. Configuration changes invalidate applicability of old results. Jev remains experimental.
 
+## Phase 5 — Accurate release probes
+
+Check public HTTP behaviour in an explicitly selected authenticated or temporary fictional pilot mode. Refuse foreign redirects, unexpectedly exposed administrator endpoints and missing private cache headers. Include temporary pilot configuration in private preflight. Keep live dependency checks separate from static configuration and independent acceptance.
+
 ## Release acceptance
 
 Independent recruiter review, privacy/data-route approvals, operational ownership and another operator deployment/restore remain required. Tests validate software behaviour; they do not establish recruitment accuracy, fairness or real-CV permission.

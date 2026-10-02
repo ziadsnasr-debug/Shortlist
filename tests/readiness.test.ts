@@ -27,6 +27,34 @@ const hostedEnv: Record<string, string | undefined> = {
 };
 
 describe("configuration readiness", () => {
+  it("checks active public-pilot configuration without exposing its actor or expiry", () => {
+    const temporary = {
+      ...hostedEnv,
+      TEMP_PUBLIC_ACCESS: "true",
+      TEMP_PUBLIC_ACCESS_UNTIL: "2099-01-01T00:00:00Z",
+      TEMP_PUBLIC_ACTOR_ID: "11111111-1111-4111-8111-111111111111",
+    };
+    expect(readiness(temporary).status).toBe("configuration_ready");
+    for (const override of [
+      { TEMP_PUBLIC_ACCESS_UNTIL: "invalid" },
+      { TEMP_PUBLIC_ACTOR_ID: "invalid" },
+      { REAL_CV_DATA_ENABLED: undefined },
+      { PERSISTENCE_MODE: "local-synthetic" },
+    ]) {
+      const report = readiness({ ...temporary, ...override });
+      expect(report.status).toBe("blocked");
+      expect(report.checks.find(c => c.name === "temporary_public_access_configuration")?.status).toBe("fail");
+      expect(JSON.stringify(report)).not.toContain(temporary.TEMP_PUBLIC_ACTOR_ID);
+      expect(JSON.stringify(report)).not.toContain(temporary.TEMP_PUBLIC_ACCESS_UNTIL);
+    }
+  });
+  it("allows an expired fictional pilot to revert to authentication", () => {
+    expect(readiness({
+      ...hostedEnv,
+      TEMP_PUBLIC_ACCESS: "true",
+      TEMP_PUBLIC_ACCESS_UNTIL: "2000-01-01T00:00:00Z",
+    }).status).toBe("configuration_ready");
+  });
   it("blocks a local login bypass flag in hosted configuration", () => {
     const report = readiness({ ...hostedEnv, LOCAL_AUTH_BYPASS: "true" });
     expect(report.status).toBe("blocked");
