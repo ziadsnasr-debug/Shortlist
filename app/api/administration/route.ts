@@ -5,8 +5,12 @@ import { owner } from "@/lib/store";
 import { databaseClient } from "@/lib/supabase";
 import { administration, administrator } from "@/lib/administration";
 import { jsonBody, fail, privateHeaders } from "@/lib/http";
+import { consumeDocuments } from "@/lib/pipeline/consumer";
+import { recoverDeletions } from "@/lib/pipeline/deletion";
 import { WorkflowError } from "@/lib/workflow";
+export const maxDuration = 240;
 const Input = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("process") }).strict(),
   z
     .object({
       type: z.literal("invite"),
@@ -47,6 +51,28 @@ export async function POST(req: NextRequest) {
     administrator(access);
     await rateLimit(access.actor, "admin-write", 10, 60);
     const db = databaseClient();
+    if (input.type === "process") {
+      const result = {
+        ...(await consumeDocuments()),
+        deletions: await recoverDeletions(),
+      };
+      const { error } = await db.from("audit_events").insert({
+        workspace_id: access.workspaceId,
+        actor: access.actor,
+        operation: "manual_processing",
+        entity_id: access.workspaceId,
+        safe_metadata: result,
+      });
+      if (error)
+        throw new WorkflowError(
+          "Processing finished; audit unavailable. Reload processing status before retrying.",
+          503,
+        );
+      return NextResponse.json(
+        { ok: true, ...result },
+        { headers: privateHeaders },
+      );
+    }
     if (input.type === "invite") {
       if (!process.env.APP_URL)
         throw new WorkflowError(

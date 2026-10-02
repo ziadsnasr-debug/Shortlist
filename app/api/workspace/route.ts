@@ -61,9 +61,7 @@ export async function GET(req: NextRequest) {
         mode: access.local ? "Local synthetic" : "Supabase synthetic",
         capabilities: {
           uploads: !access.local && !!process.env.PARSER_SNAPSHOT_ID,
-          ai:
-            process.env.AI_ENABLED === "true" &&
-            !!process.env.ANTHROPIC_API_KEY,
+          ai: process.env.AI_ENABLED === "true" && !!process.env.OPENAI_API_KEY,
         },
       },
       { headers },
@@ -94,9 +92,7 @@ export async function POST(req: NextRequest) {
         mode: access.local ? "Local synthetic" : "Supabase synthetic",
         capabilities: {
           uploads: !access.local && !!process.env.PARSER_SNAPSHOT_ID,
-          ai:
-            process.env.AI_ENABLED === "true" &&
-            !!process.env.ANTHROPIC_API_KEY,
+          ai: process.env.AI_ENABLED === "true" && !!process.env.OPENAI_API_KEY,
         },
       },
       { headers },

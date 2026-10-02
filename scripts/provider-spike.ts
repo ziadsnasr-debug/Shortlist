@@ -13,7 +13,7 @@ if (result.outputs.some((x) => x === null))
   );
 console.log(
   JSON.stringify({
-    provider: "anthropic-direct",
+    provider: "openai-direct",
     model: config.model,
     promptVersion: config.promptVersion,
     passes: result.outputs.length,
