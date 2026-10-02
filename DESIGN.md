@@ -4,33 +4,30 @@ Source of truth for tokens is `app/globals.css`; this file explains them. Plan a
 
 ## Visual theme
 
-Light first, with a tuned dark theme selected by `next-themes` (`data-theme` on `<html>`, following the system until a user chooses). Restrained colour strategy: tinted neutrals plus one teal accent under roughly 10% of any surface. Navy navigation, light work surfaces and teal actions, as specification v1.2 §3 requires. Depth comes from tonal steps and 1px borders; shadows appear only on floating layers.
+Light first, with a tuned dark theme selected by `next-themes` (`data-theme` on `<html>`, following the system until a user chooses). Sober greys, at the owner's request on 2 October 2026 (a recorded deviation from the spec's navy and teal): graphite actions, charcoal navigation, neutral surfaces. Colour appears only where it carries meaning: muted ochre for blocking warnings and muted brick for errors, always with an icon and text. Depth comes from tonal steps, 1px borders and a whisper of shadow (`--shadow-xs`); floating layers use `--shadow-overlay`.
 
 ## Colour
 
-Neutrals are tinted toward the navy hue. Contrast ratios were computed on 2 October 2026.
+Neutrals carry a faint cool cast. Contrast ratios were computed on 2 October 2026.
 
-| Token                  | Light            | Dark             | Role                                      |
-| ---------------------- | ---------------- | ---------------- | ----------------------------------------- |
-| `--background`         | #f7fbfc          | #091114          | Page                                      |
-| `--card`               | #fdffff          | #0f191d          | Panels, inputs                            |
-| `--surface-2`          | #eff5f6          | #172125          | Hover, wells, quotes                      |
-| `--foreground`         | #122228 (15.7:1) | #e5edee (16.0:1) | Primary text                              |
-| `--muted-foreground`   | #49585d (7.1:1)  | #9da7a9 (7.3:1)  | Secondary text                            |
-| `--subtle-foreground`  | #636e72 (5.0:1)  | #7e888b (4.9:1)  | Tertiary text                             |
-| `--border`             | #dce3e5          | #253034          | Structure                                 |
-| `--input`              | #838e92 (3.4:1)  | #657175 (3.5:1)  | Form control boundary                     |
-| `--primary`            | #007463          | #54b9a5          | Primary action, selection, focus          |
-| `--primary-foreground` | #fdffff (5.7:1)  | #051e27 (7.3:1)  | Text on primary                           |
-| `--secondary`          | #dff6f0          | #12302b          | Selected rows, active step                |
-| `--destructive`        | #ba3535          | #e07a6e          | Errors, destructive actions               |
-| `--success`            | #2b7440          | #73c385          | Completed state (with icon and text)      |
-| `--warning`            | #935a11          | #eeb154          | Attention state (with icon and text)      |
-| `--sidebar`            | #051e27          | #050f13          | Navigation surface; text #e5edee (14.5:1) |
+| Token                          | Light                          | Dark                           | Role                                  |
+| ------------------------------ | ------------------------------ | ------------------------------ | ------------------------------------- |
+| `--background`                 | #f7f7f8                        | #0e0e10                        | Page                                  |
+| `--card`                       | #fdfdfd                        | #161618                        | Panels, inputs                        |
+| `--surface-2`                  | #f0f0f2                        | #1e1e21                        | Hover, wells, quotes                  |
+| `--foreground`                 | #18181b (16.6:1)               | #ececee (16.4:1)               | Primary text                          |
+| `--muted-foreground`           | #52525b (7.2:1)                | #a1a1aa (7.1:1)                | Secondary text                        |
+| `--subtle-foreground`          | #6b6b74 (4.9:1)                | #85858e (4.9:1)                | Tertiary text                         |
+| `--border` / `--border-strong` | #e4e4e7 / #d4d4d8              | #27272b / #37373c              | Structure                             |
+| `--input`                      | #8e8e96 (3.2:1)                | #66666e (3.2:1)                | Form control boundary                 |
+| `--primary`                    | #27272a, text #fafafa (14.3:1) | #ececee, text #18181b (15.0:1) | Primary action, selection, focus      |
+| `--warning`                    | #8a6418 (5.3:1)                | #d6b46a (9.1:1)                | Blocking warnings, with icon and text |
+| `--destructive`                | #a13838 (6.6:1)                | #e08a80 (7.0:1)                | Errors, destructive actions           |
+| `--sidebar`                    | #161618, text #f4f4f5 (16.4:1) | #0b0b0c                        | Navigation surface                    |
 
-Evidence scale (ordinal, never colour alone): `--ev-full` #006e5e / #4db39e, `--ev-partial` #6bbdab / #2f7063, `--ev-none` #dadfe0 / #2d3437 with a hatch, `--ev-unclear` #f2af48 / #e8aa4e.
+Evidence scale (ordinal, never colour alone): full #27272a / #e4e4e7, partial #8e8e96 / #71717a, not evidenced #e4e4e7 / #27272b with a hatch, needs judgement muted ochre.
 
-Rules: never raw hex in components; use the Tailwind utilities generated from these tokens (`bg-primary`, `text-muted-foreground`, `bg-surface-2`, `border-input`). A bare `border` resolves to `--border`.
+Rules: never raw hex in components; use the Tailwind utilities generated from these tokens. A bare `border` resolves to `--border`.
 
 ## Typography
 
@@ -56,7 +53,7 @@ Only transform and opacity animate. Nothing bounces. Keyboard-repeated actions c
 
 ## Brand
 
-The mark is three rounded bars of decreasing length, the top one in the accent (`components/brand/logo.tsx`, `app/icon.svg`). It uses `currentColor` with a `--logo-accent` slot: teal on light surfaces, `--sidebar-accent` #54b9a5 on navy. The wordmark is "Shortlist" in Geist 600 at −0.02em.
+The mark is three rounded bars of decreasing length, the top one brighter than the two below (`components/brand/logo.tsx`, `app/icon.svg`). It uses `currentColor` with a `--logo-accent` slot: teal on light surfaces, `--sidebar-accent` #54b9a5 on navy. The wordmark is "Shortlist" in Geist 600 at −0.02em.
 
 ## Components
 

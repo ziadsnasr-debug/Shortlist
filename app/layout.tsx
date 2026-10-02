@@ -12,8 +12,8 @@ export const metadata: Metadata = {
 };
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7fbfc" },
-    { media: "(prefers-color-scheme: dark)", color: "#091114" },
+    { media: "(prefers-color-scheme: light)", color: "#f7f7f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e0e10" },
   ],
 };
 export const dynamic = "force-dynamic";

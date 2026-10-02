@@ -8,8 +8,8 @@ import { focusRing } from "@/components/ui/focus-ring";
 
 const buttonVariants = cva(
   [
-    "relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium",
-    "transition-[transform,background-color,color,border-color] duration-(--dur-press) ease-(--ease-out)",
+    "relative inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium tracking-[-0.006em] select-none",
+    "transition-[transform,background-color,color,border-color,box-shadow] duration-(--dur-press) ease-(--ease-out)",
     "active:scale-[0.97] motion-reduce:active:scale-100",
     focusRing,
     "disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
@@ -17,20 +17,21 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        // Graphite with a hairline highlight on top and a soft contact shadow.
+        default:
+          "bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.12),0_1px_2px_rgb(0_0_0/0.16)] hover:bg-primary-hover",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.12),0_1px_2px_rgb(0_0_0/0.16)] hover:bg-destructive/90",
         outline:
-          "border border-input bg-card text-foreground hover:bg-surface-2",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "text-foreground hover:bg-surface-2",
-        link: "text-primary underline-offset-4 hover:underline",
+          "border border-border-strong bg-card text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.05)] hover:border-input/60 hover:bg-surface-2",
+        secondary: "bg-secondary text-secondary-foreground hover:bg-muted",
+        ghost: "text-muted-foreground hover:bg-surface-2 hover:text-foreground",
+        link: "text-foreground underline decoration-border-strong underline-offset-4 hover:decoration-foreground",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-10 rounded-md px-8",
+        default: "h-9 px-3.5",
+        sm: "h-8 rounded-md px-3 text-[13px]",
+        lg: "h-10 rounded-md px-5",
         icon: "size-9",
       },
     },
