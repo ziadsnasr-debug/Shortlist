@@ -202,6 +202,7 @@ try {
       env: {
         ...process.env,
         PERSISTENCE_MODE: "supabase-synthetic",
+        LOCAL_AUTH_BYPASS: "false",
         AI_ENABLED: "false",
         PARSER_SNAPSHOT_ID: "",
         NEXT_PUBLIC_SUPABASE_URL: settings.API_URL,
@@ -297,7 +298,10 @@ try {
     ).status === 403,
     "Reviewer cannot inspect admin records.",
   );
-  assert((await adminAction(reviewerCookie, { type: "process" })).status === 403, "Reviewer cannot trigger administrative processing.");
+  assert(
+    (await adminAction(reviewerCookie, { type: "process" })).status === 403,
+    "Reviewer cannot trigger administrative processing.",
+  );
   assert(
     (
       await adminAction(reviewerCookie, {
@@ -579,7 +583,10 @@ try {
   const document = (
     await db.from("documents").select("*").eq("id", documentId).single()
   ).data!;
-  assert(document.processing_config === "test-v1", "Enqueue must persist the exact processing configuration.");
+  assert(
+    document.processing_config === "test-v1",
+    "Enqueue must persist the exact processing configuration.",
+  );
   assert(
     (await db.rpc("document_attempt", { p_document: documentId })).data ===
       true,
@@ -716,7 +723,12 @@ try {
     "Same-configuration retry should be available.",
   );
   assert(
-    (await db.rpc("document_attempt", { p_document: documentId, p_generation: 1 })).data === true,
+    (
+      await db.rpc("document_attempt", {
+        p_document: documentId,
+        p_generation: 1,
+      })
+    ).data === true,
     "Current retry generation must be claimable before testing a late result.",
   );
   assert(
@@ -724,7 +736,8 @@ try {
     "Prior generation cannot commit even when the processing key is unchanged.",
   );
   assert(
-    (await db.rpc("document_attempt", { p_document: documentId })).data === false,
+    (await db.rpc("document_attempt", { p_document: documentId })).data ===
+      false,
     "Prior generation cannot reserve a paid attempt after retry.",
   );
   assert(
@@ -757,27 +770,50 @@ try {
     "Retry must restore processing state before the worker can complete.",
   );
   const retryMessages = Number(
-    execFileSync("docker", [
-      "exec",
-      "supabase_db_shortlist-local",
-      "psql",
-      "-U",
-      "postgres",
-      "-d",
-      "postgres",
-      "-At",
-      "-c",
-      `select count(*) from pgmq.q_shortlist_documents where message->>'document_id'='${documentId}';`,
-    ], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim(),
+    execFileSync(
+      "docker",
+      [
+        "exec",
+        "supabase_db_shortlist-local",
+        "psql",
+        "-U",
+        "postgres",
+        "-d",
+        "postgres",
+        "-At",
+        "-c",
+        `select count(*) from pgmq.q_shortlist_documents where message->>'document_id'='${documentId}';`,
+      ],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    ).trim(),
   );
-  assert(retryMessages === 1, "Retry must archive an old unacknowledged delivery.");
   assert(
-    (await db.rpc("document_attempt", { p_document: documentId, p_generation: 2 })).data ===
-      true,
+    retryMessages === 1,
+    "Retry must archive an old unacknowledged delivery.",
   );
-  const retried = (await db.from("documents").select("processing_key,processing_config").eq("id", documentId).single()).data!;
-  assert(retried.processing_config === "test-v2", "Explicit retry pins the new configuration.");
-  assert((await db.rpc("complete_document", completeArgs)).data === false, "Previous configuration cannot commit after retry.");
+  assert(
+    (
+      await db.rpc("document_attempt", {
+        p_document: documentId,
+        p_generation: 2,
+      })
+    ).data === true,
+  );
+  const retried = (
+    await db
+      .from("documents")
+      .select("processing_key,processing_config")
+      .eq("id", documentId)
+      .single()
+  ).data!;
+  assert(
+    retried.processing_config === "test-v2",
+    "Explicit retry pins the new configuration.",
+  );
+  assert(
+    (await db.rpc("complete_document", completeArgs)).data === false,
+    "Previous configuration cannot commit after retry.",
+  );
   completeArgs.p_key = retried.processing_key;
   completeArgs.p_generation = 2;
   const completion = await db.rpc("complete_document", {
@@ -803,7 +839,11 @@ try {
       .data!.length === 1,
   );
   const firstRun = (
-    await db.from("assessment_runs").select("id").eq("document_id", documentId).single()
+    await db
+      .from("assessment_runs")
+      .select("id")
+      .eq("document_id", documentId)
+      .single()
   ).data!.id;
   assert(
     (
@@ -817,7 +857,12 @@ try {
     "Readable-copy retry with unchanged configuration must be available.",
   );
   assert(
-    (await db.rpc("document_attempt", { p_document: documentId, p_generation: 3 })).data === true,
+    (
+      await db.rpc("document_attempt", {
+        p_document: documentId,
+        p_generation: 3,
+      })
+    ).data === true,
   );
   assert(
     (await db.rpc("complete_document", completeArgs)).data === false,
@@ -826,14 +871,19 @@ try {
   completeArgs.p_generation = 3;
   assert((await db.rpc("complete_document", completeArgs)).data === true);
   const afterReadableRetry = (
-    await db.from("assessment_runs")
+    await db
+      .from("assessment_runs")
       .select("id,processing_generation")
       .eq("document_id", documentId)
   ).data!;
   assert(
     afterReadableRetry.length === 2 &&
-      afterReadableRetry.some((run) => run.id === firstRun && run.processing_generation === 2) &&
-      afterReadableRetry.some((run) => run.id !== firstRun && run.processing_generation === 3),
+      afterReadableRetry.some(
+        (run) => run.id === firstRun && run.processing_generation === 2,
+      ) &&
+      afterReadableRetry.some(
+        (run) => run.id !== firstRun && run.processing_generation === 3,
+      ),
     "Same-key retry must keep both distinct historical assessment runs.",
   );
   assert(
@@ -923,7 +973,9 @@ try {
       .eq("id", secondDoc)
       .single()
   ).data!.processing_key;
-  assert((await db.rpc("document_attempt", { p_document: secondDoc })).data === true);
+  assert(
+    (await db.rpc("document_attempt", { p_document: secondDoc })).data === true,
+  );
   assert(
     (
       await db.rpc("complete_document", {

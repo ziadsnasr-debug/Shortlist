@@ -47,19 +47,32 @@ await writeFile(
     }),
   ),
 );
+const bypass = process.env.LOCAL_AUTH_BYPASS === "true";
 try {
   const anonymousReadiness = await context.request.get(
     origin + "/api/readiness",
   );
-  expect(anonymousReadiness.status()).toBe(401);
-  await page.goto(origin + "/login");
-  await page.getByLabel("Email", { exact: true }).fill(owner.email);
-  await page.getByLabel("Password", { exact: true }).fill(owner.password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await page
-    .getByLabel("Six digit authenticator code")
-    .fill(totp(owner.secret));
-  await page.getByRole("button", { name: "Verify and continue" }).click();
+  expect(anonymousReadiness.status()).toBe(bypass ? 200 : 401);
+  if (bypass) {
+    expect(
+      (
+        await context.request.get(origin + "/api/workspace", {
+          headers: { host: "attacker.example:3218" },
+        })
+      ).status(),
+    ).toBe(403);
+    await page.goto(origin + "/login");
+    await expect(page).toHaveURL(origin + "/");
+  } else {
+    await page.goto(origin + "/login");
+    await page.getByLabel("Email", { exact: true }).fill(owner.email);
+    await page.getByLabel("Password", { exact: true }).fill(owner.password);
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await page
+      .getByLabel("Six digit authenticator code")
+      .fill(totp(owner.secret));
+    await page.getByRole("button", { name: "Verify and continue" }).click();
+  }
   await page
     .getByRole("button", { name: "Vacancies", exact: true })
     .first()
@@ -274,7 +287,7 @@ try {
   expect(fits).toBe(true);
   await page.screenshot({ path: "work/live-local-final.png" });
   console.log(
-    "PASS: real MFA login, browser PDF/DOCX uploads, managed parser/queue, six source blocks each, hidden ranking/scores, manual full-evidence review, two scores of 100, immutable finalisation/export/reload, Axe review and 390px bounds. Provider configuration is recorded in private assessment runs; no real CV used.",
+    `PASS: ${bypass ? "local synthetic login bypass" : "real MFA login"}, browser PDF/DOCX uploads, managed parser/queue, six source blocks each, hidden ranking/scores, manual full-evidence review, two scores of 100, immutable finalisation/export/reload, Axe review and 390px bounds. Provider configuration is recorded in private assessment runs; no real CV used.`,
   );
 } catch (error) {
   await page.screenshot({ path: "work/live-local-failure.png" });

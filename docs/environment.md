@@ -25,3 +25,5 @@ At most two 4,000-output-token calls per attempt, three automatic attempts, boun
 A Claude or ChatGPT subscription used for advice does not supply an OpenAI API key. Provider keys are consumed only by the configured direct route; no substitution with CLI assessment or OAuth credentials.
 
 Run static configuration preflight explicitly with private values loaded: `node --env-file=.env.local --import tsx scripts/preflight.ts --check`. The administrator-only `/api/readiness` returns names/statuses with private no-store headers. Passing is configuration evidence, not live dependency verification, production approval or real-data activation.
+
+`LOCAL_AUTH_BYPASS` defaults false; temporary synthetic loopback convenience only. `LOCAL_AUTH_USER_ID` selects an existing local member through private configuration, not a browser parameter. Hosted/staging/production/remote origins refuse it; membership revocation and role enforcement remain active. Authentication test servers explicitly disable it.

@@ -11,6 +11,7 @@ export default defineConfig({
     command: "npm run start -- --port 3217",
     env: {
       PERSISTENCE_MODE: "local-synthetic",
+      LOCAL_AUTH_BYPASS: "false",
       APP_URL: "http://127.0.0.1:3217",
       AI_ENABLED: "false",
     },

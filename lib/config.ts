@@ -1,5 +1,7 @@
 import "server-only";
+import { localBypassActor } from "./local-access";
 export function configuration() {
+  localBypassActor();
   const mode = process.env.PERSISTENCE_MODE ?? "local-synthetic";
   if (!["local-synthetic", "supabase-synthetic"].includes(mode))
     throw new Error("Only synthetic persistence modes are implemented.");
