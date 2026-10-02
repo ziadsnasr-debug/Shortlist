@@ -1,8 +1,9 @@
 {
-  "release": "0.1.0",
-  "commit": "e32d308658dd26a6a88457ac4a0ab96d99992c42",
+  "release": "0.2.0",
+  "commit": "f9073763254545ec8631c1d17a6b19e8eba7d692",
   "runtime": "v26.5.0",
   "dependencies": {
+    "@ai-sdk/anthropic": "4.0.71",
     "@radix-ui/react-checkbox": "1.3.11",
     "@radix-ui/react-dialog": "1.1.23",
     "@radix-ui/react-label": "2.1.15",
@@ -10,9 +11,12 @@
     "@radix-ui/react-slot": "1.3.3",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.117.2",
+    "@vercel/sandbox": "3.5.1",
+    "ai": "7.0.127",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "lucide-react": "1.49.0",
+    "mammoth": "1.13.0",
     "next": "16.3.8",
     "next-themes": "0.4.6",
     "react": "19.3.0",
@@ -20,6 +24,8 @@
     "server-only": "0.0.1",
     "sonner": "2.0.8",
     "tailwind-merge": "3.7.0",
+    "unpdf": "1.8.1",
+    "yauzl": "3.4.0",
     "zod": "4.6.5"
   },
   "devDependencies": {
@@ -29,8 +35,13 @@
     "@types/node": "26.6.4",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "@types/yauzl": "3.4.0",
+    "docx": "9.8.1",
+    "esbuild": "0.28.2",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.8",
+    "jszip": "3.10.1",
+    "pdf-lib": "1.17.1",
     "prettier": "3.9.9",
     "tailwindcss": "4.3.3",
     "tsx": "4.23.15",
@@ -39,7 +50,15 @@
   },
   "specification": "1.2 / 2026-10-02",
   "data": "synthetic only",
-  "aiEnabled": false,
+  "defaultAiEnabled": false,
+  "evidencePromptVersion": "evidence-v1",
+  "extractionVersion": "extract-v1",
+  "parserBundle": {
+    "extractionVersion": "extract-v1",
+    "sha256": "d839fc7bbdecfaa9754445fa25db4054ea3ba973cf8cc7b43b5cdb4340928015",
+    "bytes": 4040224
+  },
+  "activation": "Synthetic implementation; hosted, model and human exit gates pending",
   "parserSnapshot": null,
   "providerModel": null
 }
