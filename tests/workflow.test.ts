@@ -8,6 +8,7 @@ import {
   ranking,
   highest,
   publicState,
+  candidateLabel,
   exportBatch,
   csvCell,
   validateRubric,
@@ -361,4 +362,56 @@ describe("CSV injection", () => {
   );
   it("quotes commas and embedded quotes", () =>
     expect(csvCell('a,"b"')).toBe('"a,""b"""'));
+  it("labels candidates by arrival order with stable padding", () => {
+    expect(candidateLabel(0, 6)).toBe("Candidate 01");
+    expect(candidateLabel(8, 30)).toBe("Candidate 09");
+    expect(candidateLabel(98, 99)).toBe("Candidate 99");
+    expect(candidateLabel(99, 100)).toBe("Candidate 100");
+    expect(candidateLabel(0, 100)).toBe("Candidate 001");
+    const apps = publicState(opened()).vacancies[0].batches[0].applications;
+    expect(apps.map((a) => a.label)).toEqual([
+      "Candidate 01",
+      "Candidate 02",
+      "Candidate 03",
+      "Candidate 04",
+      "Candidate 05",
+      "Candidate 06",
+    ]);
+  });
+  it("keeps real ids and numbering when an application is disposed", () => {
+    let s = opened();
+    const ids = batch(s).applications.map((a) => a.id);
+    s = command(s, {
+      ...base,
+      type: "dispose",
+      applicationId: "A102",
+      disposition: "duplicate",
+      reason: "Same synthetic application received twice.",
+    });
+    const apps = publicState(s).vacancies[0].batches[0].applications;
+    expect(apps.map((a) => a.id)).toEqual(ids);
+    expect(apps[1].state).toBe("disposed");
+    expect(apps[1].label).toBe("Candidate 02");
+    expect(apps[2].label).toBe("Candidate 03");
+    expect(apps[5].label).toBe("Candidate 06");
+  });
+  it("labels frozen snapshot applications consistently", () => {
+    let s = reviewed();
+    s = command(s, {
+      ...base,
+      type: "selection",
+      selected: [],
+      reason: "Practice batch.",
+      tieReason: "",
+      exceptions: {},
+    });
+    s = command(s, { ...base, type: "finalise" });
+    const view = publicState(s).vacancies[0].batches[0];
+    expect(view.snapshot?.applications.map((a) => a.label)).toEqual(
+      view.applications.map((a) => a.label),
+    );
+    expect(view.snapshot?.applications.map((a) => a.id)).toEqual(
+      view.applications.map((a) => a.id),
+    );
+  });
 });

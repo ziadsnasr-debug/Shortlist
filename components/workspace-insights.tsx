@@ -123,7 +123,9 @@ export function EvidenceComparison({
   applications,
 }: {
   rubric: Criterion[];
-  applications: Pick<Application, "id" | "assessments">[];
+  applications: (Pick<Application, "id" | "assessments"> & {
+    label: string;
+  })[];
 }) {
   if (!applications.length)
     return (
@@ -164,7 +166,7 @@ export function EvidenceComparison({
               <th scope="col">Requirement</th>
               {applications.map((a) => (
                 <th scope="col" key={a.id}>
-                  {a.id}
+                  {a.label}
                 </th>
               ))}
             </tr>

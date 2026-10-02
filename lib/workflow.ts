@@ -657,38 +657,54 @@ export function applyAction(
   });
   return next;
 }
+// Display-only anonymous label, numbered by arrival position. The
+// applications array is append-only and disposal never removes or reorders
+// entries, so a candidate keeps its number for the life of the batch.
+export function candidateLabel(index: number, total: number) {
+  const width = Math.max(2, String(Math.max(total, index + 1)).length);
+  return `Candidate ${String(index + 1).padStart(width, "0")}`;
+}
 export function publicState(state: Workspace, reveal = false) {
   return {
     ...state,
     audit: undefined,
     vacancies: state.vacancies.map((v) => ({
       ...v,
-      batches: v.batches.map((b) => ({
-        ...b,
-        ranking: allReviewed(b) ? ranking(b) : null,
-        snapshot: b.snapshot
-          ? {
-              ...b.snapshot,
-              applications: b.snapshot.applications.map((a) => ({
-                ...a,
-                blocks: a.blocks.map((block) => ({
-                  ...block,
-                  text: block.assessmentText ?? block.text,
+      batches: v.batches.map((b) => {
+        const labelOf = (id: string) =>
+          candidateLabel(
+            b.applications.findIndex((a) => a.id === id),
+            b.applications.length,
+          );
+        return {
+          ...b,
+          ranking: allReviewed(b) ? ranking(b) : null,
+          snapshot: b.snapshot
+            ? {
+                ...b.snapshot,
+                applications: b.snapshot.applications.map((a) => ({
+                  ...a,
+                  label: labelOf(a.id),
+                  blocks: a.blocks.map((block) => ({
+                    ...block,
+                    text: block.assessmentText ?? block.text,
+                  })),
                 })),
-              })),
-            }
-          : undefined,
-        applications: b.applications.map((a) => ({
-          ...a,
-          blocks: a.blocks.map((block) => ({
-            ...block,
-            text: block.assessmentText ?? block.text,
+              }
+            : undefined,
+          applications: b.applications.map((a, i) => ({
+            ...a,
+            label: candidateLabel(i, b.applications.length),
+            blocks: a.blocks.map((block) => ({
+              ...block,
+              text: block.assessmentText ?? block.text,
+            })),
+            name: reveal && allReviewed(b) ? a.name : undefined,
+            score: allReviewed(b) ? score(b, a) : null,
+            blockers: reviewBlockers(b, a),
           })),
-          name: reveal && allReviewed(b) ? a.name : undefined,
-          score: allReviewed(b) ? score(b, a) : null,
-          blockers: reviewBlockers(b, a),
-        })),
-      })),
+        };
+      }),
     })),
   };
 }
