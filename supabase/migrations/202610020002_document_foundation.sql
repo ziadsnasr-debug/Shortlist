@@ -1,0 +1,20 @@
+create table public.vacancies (id uuid primary key default gen_random_uuid(),workspace_id uuid not null references public.workspaces(id),title text not null,department text not null default '',job_description text not null,archived_at timestamptz,inbound_alias text);
+create table public.batches (id uuid primary key default gen_random_uuid(),vacancy_id uuid not null references public.vacancies(id),period_label text not null,state text not null check(state in ('criteria','intake','review','finalised')),rubric_json jsonb not null,rubric_version integer not null,processing_config_version text not null,created_at timestamptz not null default now(),closed_at timestamptz,final_snapshot_json jsonb);
+create table public.applications (id uuid primary key default gen_random_uuid(),batch_id uuid not null references public.batches(id),anonymous_label text not null,identity_record jsonb,state text not null,disposition_reason text,source_kind text not null default 'manual' check(source_kind in ('manual','email')),source_message_id text,version bigint not null default 0);
+create table public.documents (id uuid primary key default gen_random_uuid(),application_id uuid not null references public.applications(id),private_object_key text not null unique,hash text not null,original_filename text not null,size bigint not null check(size>0 and size<=5242880),type text not null check(type in ('pdf','docx')),extraction_version text,source_quality text,deletion_state text not null default 'retained');
+create table public.source_blocks (id text not null,document_id uuid not null references public.documents(id),locator_json jsonb not null,original_text text not null,assessment_text text not null,input_method text not null check(input_method in ('parsed','manual')),primary key(document_id,id));
+create table public.assessment_runs (id uuid primary key default gen_random_uuid(),processing_key text not null unique,application_id uuid not null references public.applications(id),document_id uuid not null references public.documents(id),rubric_version integer not null,config_version text not null,pass_outputs jsonb,merged_suggestions jsonb,safe_error_code text,usage jsonb,state text not null);
+create table public.application_reviews (application_id uuid primary key references public.applications(id),assessment_run_id uuid not null references public.assessment_runs(id),effective_categories jsonb not null,evidence_references jsonb not null,essential_checks jsonb not null,reasons jsonb not null,reviewed_by uuid references auth.users(id),reviewed_at timestamptz,version bigint not null default 0);
+create table public.deletion_ledger (id uuid primary key default gen_random_uuid(),workspace_id uuid not null references public.workspaces(id),entity_id uuid not null,requested_at timestamptz not null default now(),completed_at timestamptz);
+-- Deny direct reads/writes until the normalized Stage 3 operations enforce
+-- per-record source, identity and ranking restrictions. Membership alone must
+-- never reveal applicant identities or unpublished comparative scores.
+do $$ declare t text; begin foreach t in array array['vacancies','batches','applications','documents','source_blocks','assessment_runs','application_reviews','deletion_ledger'] loop execute format('alter table public.%I enable row level security',t);execute format('revoke all on public.%I from anon,authenticated',t);execute format('grant all on public.%I to service_role',t);end loop;end $$;
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) values('cv-originals','cv-originals',false,5242880,array['application/pdf','application/vnd.openxmlformats-officedocument.wordprocessingml.document']) on conflict(id) do nothing;
+-- Intentionally no browser Storage policies yet. Stage 3 issues scoped upload
+-- authorisations only after membership, path, signature and budget checks.
+create extension if not exists pgmq;
+select pgmq.create('shortlist_documents');
+revoke all on schema pgmq from anon,authenticated;
+revoke all on all tables in schema pgmq from anon,authenticated;
+revoke all on all functions in schema pgmq from public,anon,authenticated;

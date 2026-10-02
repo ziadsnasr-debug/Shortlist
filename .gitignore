@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.env*
+!.env.example
+work/
+test-results/
+playwright-report/
+context/zed-vault
+*.tsbuildinfo
+supabase/.temp/
+supabase/.branches/

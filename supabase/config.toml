@@ -1,0 +1,33 @@
+project_id = "shortlist-local"
+[api]
+enabled = true
+port = 55421
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+[db]
+port = 55422
+shadow_port = 55420
+major_version = 17
+[studio]
+enabled = true
+port = 55423
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/confirm"]
+enable_signup = false
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+[storage]
+enabled = true
+file_size_limit = "5MiB"
+[inbucket]
+enabled = true
+port = 55424
+smtp_port = 55425
+pop3_port = 55426
+[analytics]
+enabled = false
+port = 55427

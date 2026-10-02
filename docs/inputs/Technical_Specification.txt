@@ -1,0 +1,434 @@
+SHORTLIST
+A small, transferable CV review POC
+Final technical specification · Version 1.2 · 2 October 2026
+Prepared for Ziad Nasr. Revised following the supplied technical review and an inspection of the original specification and interface.
+Purpose:
+ help a UK employer review approximately 15 to 20 CVs a week, against configurable criteria for different vacancies, and approve up to three candidates per batch.
+Design rule:
+ AI suggests evidence categories. Code calculates points. A recruiter reviews every application and owns the shortlist.
+Delivery status:
+ the accompanying HTML is an interactive demonstration using fictional records. It has no authentication, document upload service, AI connection or production backend. This specification defines the real POC to build. Browser demonstration tests are not security or model accuracy tests.
+Recommended build:
+ one TypeScript application on Vercel; Supabase for authentication, database, private files and a small durable queue; a managed Vercel Sandbox for document parsing; one direct AI provider. No Python service, Linux server, autonomous agent, vector database or custom lease framework.
+First real data decision:
+ the employer must approve AI processing and privacy arrangements. UK company location does not, by itself, specify a requirement for UK exclusive processing. Do not upload real CVs until that requirement is resolved.
+This version supersedes version 1.0 and the intermediate revision. Appendix A is a mandatory security addendum consolidated from the security requirements discussed in this conversation. No separate external addendum file was supplied. The companion implementation prompt and prototype use this version’s workflow.
+1. Decisions made after the review
+Claude’s main simplification is adopted. Some suggested shortcuts change safety properties, rather than merely reducing code.
+Recommendation
+Final decision
+One application language
+Adopt TypeScript throughout, including document orchestration. Use unpdf/PDF.js and Mammoth in the parser.
+Managed hosting
+Adopt Vercel and Supabase in customer controlled accounts. Add one AI provider account. This is not literally only two vendors.
+Managed parser sandbox
+Adopt Vercel Sandbox with denied network access and no credentials. A secretless ordinary function is not equivalent isolation.
+Managed queue
+Adopt Supabase Queues. Retain minimal idempotency, retry limits and atomic completion. Do not build a custom leasing framework.
+Vercel AI SDK
+Adopt current structured output via generateText and Output.object. generateObject is deprecated. Keep one small assessment module, not an adapter framework. [S01]
+One approval per CV
+Adopt. Require individual actions only for essentials, uncertain results, disagreements and manual changes. No approval of an entire batch without reviewing each CV.
+Short AI explanations
+Adopt a maximum 25 word rationale alongside actual source passages. A persuasive rationale is not evidence.
+Two assessments
+Use two separate calls during the pilot, with no exposure to each other’s answers. Treat disagreement as unresolved. Agreement is not proof, and the calls are not statistically independent.
+Blind review
+Adopt identity minimisation and hidden names. Do not describe the data as anonymous or the result as free from bias.
+AI drafted criteria
+Adopt editable suggestions from a pasted job description. Human publication is mandatory.
+Scans in one model call
+Do not adopt for the core release. Scans receive a visible manual handling route; automatic visual transcription is a later addition.
+Revisions and previews
+Remove reopening and CV revision interfaces. Finalised batches stay final. No Decisions API or JEV dependency in version one.
+Important provider correction.
+ The reviewed documentation did not establish an unambiguous UK exclusive route for the exact proposed Bedrock configuration. The model specific documentation URL redirected to the general guide when checked; that does not verify the claimed London route. Require a successful customer account test and written regional confirmation before committing to it. This is uncertainty about the route, not a claim that London inference is unavailable. [S10]
+Important repository correction.
+ The closest scoring reference excludes unknown criteria from its denominator. Do not copy that behaviour: this product keeps its published 100 point denominator and blocks unresolved reviews. The evaluation repository suggested in the review measures CV tailoring, not suitability for a vacancy. [R01, R06]
+2. Scope and the simplest useful workflow
+The release serves one employer and a small invited team. Multiple vacancies are supported inside that workspace. Each vacancy has its own criteria and weekly batches. There is no public registration or candidate portal.
+Step
+What the recruiter does
+Completion rule
+1. Criteria
+Enter a job title and description. Edit proposed sections, requirements, evidence definitions, points and essentials.
+Publish complete criteria totalling 100 points.
+2. Add CVs
+Upload all documents for the vacancy’s batch. Inspect every processing outcome. Close intake when the batch is complete.
+Every uploaded item is accounted for; intake is closed explicitly.
+3. Review
+Read the category, short rationale and source evidence. Resolve flagged items. Confirm the CV and move to the next.
+Every active application has a resolved human review.
+4. Shortlist
+Compare confirmed scores. Choose zero to three candidates. Explain the selection and finalise.
+Server checks the whole batch and stores a frozen snapshot.
+Included:
+ manual PDF and DOCX intake; configurable sections; source linked assessments; two pass disagreement flags; hidden identities; individual application review; essential requirement exceptions; a written tie decision; export; audit records; deletion; customer deployment.
+Not included:
+ email ingestion, ATS integrations, automatic rejection, interview scheduling, reference checking, CV rewriting, external profile research, multiple production model providers, or automatic scan transcription.
+Initial limits, chosen for this POC:
+ 30 files per batch; 5 MB per file; 10 PDF pages; 12 criteria maximum, with six to eight preferred. Apply an extracted text cap and decompressed DOCX cap as well. These are application limits, not provider specifications. No silent truncation.
+Text extraction failures, password protected files, mixed text and unreadable pages, and scans enter
+Needs readable copy
+. The reviewer can request a text based replacement before review, or transcribe relevant text with page references and check it against the original. Manually entered passages are labelled as such. A processing failure is never zero points.
+Before intake closes, a duplicate, withdrawal or wrong vacancy submission can receive an explicit disposition and reason. Failed documents remain in the count until resolved or legitimately disposed of. Ordinary low scoring candidates cannot be removed as a workaround. No permanent candidate rejection is performed by the system.
+The first evaluated release is English. Other languages and unusual layouts are not validated merely because a model can read them. A CV claim remains unverified even when its source passage is correctly extracted.
+3. Interface specification
+Retain the original restrained navy navigation, white work surfaces and teal actions. Simplify the interaction rather than introduce dashboards, charts or a chat interface. The four step bar always identifies the next action.
+Surface
+Required behaviour
+Vacancies
+A short list of roles with review progress and a Continue button. New vacancy asks only for title, team and job description.
+Criteria
+Group requirements into named sections. Show a running 100 point total. Keep detailed evidence definitions in expandable rows. Mark essentials separately.
+CV intake
+Show every file, its status and a clear next action. Explicit Start review closes intake. No score column.
+Review
+Show one application at a time, with category, short AI note and quotation for each criterion. Keep full source context alongside it. Confirm and next saves once and advances.
+Shortlist
+Reveal ranking only after all applications are reviewed. Names stay hidden until the reviewer chooses Reveal names. Select highest scores must stop at a boundary tie.
+Administration
+Invitation management, retention, processing errors and export/deletion. Keep model selection out of the ordinary recruiter workflow.
+Review burden.
+ Ordinary agreed criteria do not each have a confirmation checkbox. The reviewer makes one overall confirmation after seeing all criteria and evidence. Essentials, UNCLEAR results, pass disagreements and manual changes require an individual check. Changes and disputed judgements require a brief reason. This is not a promise that a checkbox alone constitutes meaningful oversight. Recruiters need time, training, source access and authority to correct the output. [S11]
+Plain language.
+ Display FULL as “Full evidence”, PARTIAL as “Partial evidence”, NOT_EVIDENCED as “Not evidenced in this CV”, and UNCLEAR as “Needs your judgement”. Show “AI note” beside the rationale. Never label a person as a weak candidate or infer that missing CV evidence proves missing ability.
+Interaction rules.
+ The interface shows why a primary button is disabled. Save drafts without losing edits. Use a version check for concurrent updates; never silently overwrite another reviewer. Changing a confirmed application clears its confirmation and any provisional selection, but cannot change a finalised snapshot.
+Accessibility.
+ Label all inputs. Support keyboard navigation, visible focus, Escape and focus restoration for dialogs. Status must use text as well as colour. Stack the evidence and source panels on narrow screens. Check desktop, mobile and 200% zoom. Avoid hover only actions, hidden required fields and timers that force a decision.
+Prototype boundary.
+ The HTML demonstrates the workflow with synthetic CV text and preset rubric suggestions. Add sample CVs does not read real files. Local browser state is not a production database or an access control mechanism. The real application must replace it with authenticated server operations.
+4. Architecture and provider decision
+Browser → Next.js server → Supabase Auth, Postgres, private Storage and Queues.
+Queued document → restricted Vercel Sandbox → validated source blocks → direct AI calls → validated suggestions → human review → deterministic scoring.
+Component
+Responsibility
+Next.js, TypeScript and React
+Screens, server operations, access checks, review transitions, exports and the queue consumer function.
+Tailwind and shadcn/ui
+Maintained forms, dialogs, tables and accessible component foundations. No separate design system service.
+Supabase London
+Membership, rubrics, applications, source records, private files, reviews and pgmq messages.
+Vercel Sandbox, London
+Parse one document in an ephemeral environment without credentials or outbound network access.
+Vercel AI SDK and Zod
+One typed assessment function and one rubric drafting function, using the same approved direct provider.
+Direct Claude API
+Initial synthetic pilot candidate: Claude Opus 5.5. Pin the tested identifier and settings. This is a model to evaluate, not a proven recruitment winner. [S06]
+Use the supported stable framework and runtime versions available at implementation, pin them in lockfiles, and record them in the release manifest. Current capability matters; an unpinned latest alias is not a reproducible release.
+Hosting.
+ Set the application’s server functions and sandbox explicitly to London rather than inherit defaults. Supabase must use the specific London region. Vercel documents London sandbox support and denied network policies. Turn off automatic failover outside an approved geography. [S02, S03]
+AI routing.
+ Call the selected provider directly through its SDK provider object. Do not use a generic gateway model string that silently adds a routing intermediary. Keep timeouts, output limits, prompt version and provider settings in one server module. Changing provider still requires contract, capability and evaluation checks; it is not safely reduced to a one line change.
+Privacy branch.
+ The direct Claude API is not a UK exclusive processing commitment. Its documented inference geographies include US and global modes. Use synthetic data until the employer approves the actual transfers and retention. If UK exclusive processing is mandatory, replace this provider route with a verified UK regional deployment before the real pilot; do not automatically fall back overseas. [S07]
+Practical simplification:
+ no permanent worker service is deployed. A scheduled server function consumes Supabase’s durable queue. Sandbox setup is an automated build step, not a customer maintained Linux host. The customer still owns dependencies, configuration and incident handling.
+5. Document pipeline and durable processing
+Upload.
+ The authenticated server reserves a document ID and storage path. Upload directly to that private path using narrowly scoped, expiring authorisation. Finalise upload only after checking ownership, actual bytes, file signature, size and duplicate hash. Do not proxy a large file through a small request body limit. Enqueue only identifiers, never CV text.
+Parse.
+ Start a sandbox from a pinned, dependency only snapshot. No CVs or credentials may be present in that snapshot. The controller transfers bytes through the sandbox control API; the sandbox does not download from a signed storage URL. Use an explicit denied network policy before the document is present. Stop the sandbox in a finally block. Validate and bound returned data before saving it. [S02]
+Use unpdf/PDF.js text items to preserve page and text locations. Do not merge the document into an untraceable string. Use Mammoth raw text rather than its generated HTML; keep external file access disabled. Preserve paragraph identifiers for DOCX and include tables in extraction tests. Do not invent DOCX page numbers. Neither package is itself the security boundary. [S16, S17]
+Each source block stores an application assigned ID, document hash, locator, exact extracted text, minimised assessment text and extraction version. Keep the original and minimised text separate so transformations remain inspectable. For example, P2_B4 identifies a PDF block and D_B12 a DOCX paragraph. Relevant PDF previews may be rendered in the same sandbox when needed for checking. Display safe text by default; do not serve an active original document inline in the application origin.
+Inspect.
+ Route incomplete extraction, suspicious instructions, hidden content indicators or corrupted text to review. Antivirus scanning is useful defence in depth, not a safety certificate. Never send real CVs to an unapproved public malware checker. Enforce decompression, CPU, memory, time and output limits. [S12]
+Minimise.
+ Remove known names, email addresses, telephone numbers, addresses, photos and irrelevant identity fields from the assessment input. Avoid transmitting raw files when text is sufficient. Preserve relevant qualifications, dates and responsibilities. Masking can miss identifying details or remove useful content: flag uncertain transformations for checking and retain an authorised original. Do not promise complete anonymity.
+Queue.
+ Use one private pgmq queue and a protected Vercel cron endpoint. Suggested initial bounds are two documents per consumer invocation, a 240 second function ceiling and 360 second visibility timeout, with shorter internal timeouts. Trigger consumption after upload and use the scheduled consumer for recovery; limit invocation and provider concurrency to the tested budget. Verify these settings against the deployed plan. A queue provides durable messages, not its own running worker. [S04]
+Create a unique processing key from document hash, application, rubric version and processing configuration. Complete the result and current application state in a transaction; acknowledge only after commit. Redelivery must return the existing result instead of creating a second review. A stale result for a replaced or deleted document cannot commit. After three attempts, show Needs attention with an authorised Retry action. No browser connection is required to finish processing. Exactly once delivery within a visibility window is not a guarantee of exactly once business effects.
+6. AI contract, scoring and finalisation
+The server constructs two fresh requests using the same minimised source blocks and approved criteria. Neither request sees the other answer. The model has no tools, mail, browsing, credentials or other applicants. It classifies evidence only; it does not choose rubric weights, applicant IDs, scores or actions.
+Each response contains exactly one entry for every criterion:
+{
+  "criteria": [
+    {
+      "criterion_id": "c1",
+      "category": "PARTIAL",
+      "evidence_ids": ["P2_B4"],
+      "rationale": "The CV describes supporting an account director, not independent ownership of the customer portfolio."
+    }
+  ]
+}
+Use generateText with Output.object and a strict Zod schema. Define category enums and field bounds. Reject extra or duplicate criteria, foreign IDs, absent references and invalid output. Require source evidence for FULL or PARTIAL. Cap rationale at 25 words; keep it visibly labelled as AI generated. Rendering uses the stored source text, never a model supplied quote. Anthropic’s native citations do not replace this contract because they are documented as incompatible with strict structured output in the same request. [S01, S05]
+Merge rule.
+ Valid, matching categories become suggestions. A category disagreement, absent response or invalid support becomes UNCLEAR. Keep both original suggestions privately for audit. Require a rationale tied to the cited passages; an unsupported explanation is also unresolved. Do not average their categories or ask another model to silently break the tie. Two agreeing calls can still share the same mistake or injection vulnerability. Compare one pass and two passes on held out data; keep the second only if its correction benefit justifies reviewer burden.
+Score in code.
+ FULL earns 100% of a criterion’s points, PARTIAL 50%, and NOT_EVIDENCED zero. UNCLEAR has no score and blocks confirmation. Maximum points are positive integers totalling 100. Keep the denominator fixed. Do not use model confidence, visual appearance or school prestige as a multiplier. Use integer half point units or an exact decimal type.
+Review authority.
+ An application’s final assessment consists of explicit manual decisions where required and the remaining suggestions accepted by that application’s human confirmation. Persist this effective assessment set with the reviewed document, rubric and model versions. A category reference proves location, not semantic correctness or truthful employment history.
+Finalisation transaction.
+ Check membership and role, closed intake, every application’s review or legitimate disposition, no UNCLEAR categories, valid support for credited categories, matching rubric/document versions, zero to three selected IDs and a written selection reason. Essentials remain visible separately. Selecting someone with an unmet essential requires an explicit documented exception. At a boundary tie, the system cannot choose arbitrarily by arrival time or ID.
+Store an immutable decision snapshot. A new weekly batch gets its own copied rubric, not a mutable reference to the previous batch. No reopen button. Material errors after finalisation require an administrator’s recorded correction or a superseding batch, rather than silent alteration. Legal rectification and deletion processes still apply.
+7. Security requirements that remain small
+The threat model covers malicious CV instructions, hostile files, manipulated scores, unauthorised staff access, injected model output and accidental disclosure. It does not promise protection from every possible attack.
+Boundary
+Required control and test
+Document to parser
+Isolated sandbox, denied DNS and network, no secrets, pinned dependencies, resource limits. Test outbound requests and a planted secret.
+Applicant text to model
+Separate untrusted source content from approved instructions. No candidate text in system instructions, no tools and no shared applicant conversation.
+Model to application
+Strict schema plus source and business validation. Model output never supplies an executable command, URL to fetch, storage path or record owner.
+Browser to server
+Invitation based membership, MFA for live access, role checks on every action, rate limits, session validation and normal CSRF protections.
+Server to records
+RLS on exposed tables and private storage policies. No privileged key in browser code. Recheck authorisation even where a server credential can bypass RLS.
+Write to final state
+Gate changes in server operations and database transactions. Revoke direct client writes that bypass review and finalisation rules.
+Text to display or export
+Escape text. Do not render model HTML, load remote images or follow document links. Protect CSV cells from spreadsheet formula execution.
+Application to logs
+Log IDs, state transitions and safe error codes. Do not log CV bodies, prompts, raw model errors, contact data or source URLs.
+An injection detector may create a review flag. It must never mark the CV trusted, automatically reject a candidate or award a penalty. Separating extraction and assessment helps organisation, but does not magically remove attacks carried in text. OWASP recommends defence in depth, limited privileges and validation rather than reliance on prompt wording alone. [S13]
+Keep the provider response untrusted even when structured. Store audit material privately under the retention policy, not in general diagnostics. No tracking pixels, advertising analytics or session replay on the recruiter workspace. Authenticated pages and exports must not enter public CDN caches.
+Use one workspace with administrator and reviewer roles. Public signup is disabled. Administrators invite users and manage deletion. Reviewers can assess and finalise according to the employer’s policy, but cannot change a published rubric inside an active batch. User editable profile metadata is not a trusted source of role permissions.
+Use the customer’s approved sender for authentication invitations. This is separate from CV email ingestion and belongs in the processor inventory. Keep preview deployments on synthetic data with separate secrets. Dependency updates, least privilege and a tested restore are still required despite managed hosting.
+8. Minimal data model and server operations
+Use Postgres relations for ownership and important state, with versioned JSON for small rubric and assessment payloads. Avoid dozens of tables for six to twelve criteria.
+Record
+Minimum fields
+workspace_members
+workspace_id, user_id, administrator or reviewer role, active status
+vacancies
+id, workspace_id, title, department, job_description, archived_at, inbound_alias nullable
+batches
+id, vacancy_id, period_label, state, rubric_json, rubric_version, processing_config_version, created_at, closed_at, final_snapshot_json
+applications
+id, batch_id, anonymous_label, identity_record, document_id, state, disposition_reason, source_kind, source_message_id nullable, version
+documents
+id, application_id, private object key, hash, original filename, size, type, extraction_version, source_quality, deletion_state
+source_blocks
+id, document_id, locator_json, original_text, assessment_text, input_method
+assessment_runs
+id, processing_key unique, application_id, document/rubric/config versions, pass outputs, merged suggestions, safe error code, usage, state
+application_reviews
+application_id, assessment_run_id, effective categories, evidence references, essential checks, reasons, reviewed_by, reviewed_at, version
+audit_events
+workspace_id, actor, operation, entity ID, timestamp, safe metadata; append only through application operations
+pgmq stores work messages; do not add a second custom job lease table. Audit append only means the application cannot rewrite the log; it is not a claim of tamper resistance against the cloud account administrator.
+Server operations:
+ create vacancy; draft criteria; publish criteria; reserve and finalise upload; set a legitimate intake disposition; close intake; retry processing; save review draft; confirm application; finalise shortlist; export batch; delete application; start next batch.
+All operations identify the active workspace on the server. Review updates carry the expected row version and assessment run ID. A stale update returns a conflict with reload guidance. Finalisation uses a database transaction and rechecks every gate; disabling a browser button is only a convenience.
+Do not let authenticated users write assessment runs, audit events or final snapshots through unrestricted Data API access. Use constrained server operations and appropriate database grants. A reviewer must not be able to set reviewed_at directly and bypass the confirmation checks. [S14]
+Deletion removes originals, previews, text, assessment content and identifying review data according to approved retention and any legitimate hold. Failed deletions are retried and visible to an administrator. A minimal deletion ledger prevents a restore from resurrecting deleted applicants.
+Email later:
+ source_kind accepts manual now and email later; source_message_id supports deduplication; a reserved inbound_alias is initially null. No webhook, mailbox credentials or active inbound address is created in this POC. That later channel must pass through exactly the same file and review boundaries.
+9. Build in six working increments
+Do not start with AI. Establish the review workflow and authoritative server checks first. Each increment must be usable and demonstrated before the next one begins.
+Stage
+Deliverable
+Exit evidence
+1. Workflow
+Implement the supplied interface in Next.js with synthetic records. Criteria, intake, review and finalisation all work.
+A recruiter completes one batch without help. No inactive controls.
+2. Ownership and persistence
+Customer accounts, invitation flow, memberships, RLS, private storage and server review operations.
+A second reviewer can resume work; outsiders and forbidden writes are denied.
+3. Documents and queue
+Upload validation, managed parser snapshot, stable source blocks, pgmq consumer and visible failures.
+Valid PDF and DOCX succeed; scans and malformed documents reach explicit handling states; retry is safe.
+4. One AI route
+AI drafted criteria, bounded assessments, rationales, source validation and disagreement routing.
+Real calls process synthetic fixtures; invalid outputs cannot create confirmed scores.
+5. Pilot gates
+Held out evaluation, paired attacks, access tests, fault recovery, accessibility and user timing.
+The thresholds below are measured and approved, with failures recorded rather than hidden.
+6. Customer acceptance
+Release tag, documented deployment, restore exercise, customer training and revoked developer access.
+Another person deploys and operates the system without the original developer’s credentials.
+Repository structure:
+ app/ for routes and screens; components/ for reused UI; lib/ for access, scoring, assessment and validation; parser/ for the bundled sandbox script; supabase/migrations/ for schema and grants; fixtures/synthetic/; tests/; docs/. One package lock and a small parser build script are enough. No monorepo framework is required.
+Provider spike at stage 2.
+ Use synthetic content to confirm account access, schema support, timeout behaviour, expected output limits, data arrangements and the deployed region requirements. Do not write an undocumented preview endpoint or silently reroute when the chosen model is unavailable.
+Suggested effort allowance:
+ 12 to 18 focused developer days for the real POC, including testing and handover, assuming access and privacy decisions are prompt. This is a planning estimate, not a fixed quote. Data cleaning, contractual reviews or a strict regional AI deployment can extend it. The supplied interface is a reference implementation of interactions, not a substitute for those stages.
+Build discipline.
+ Run unit, integration and browser tests before merging. Use synthetic data in CI and previews. Review deployment settings as part of the release. Do not call a phase complete because the landing screen looks finished or a model produced plausible JSON once.
+10. Acceptance gates and UK pilot approval
+These are proposed release thresholds, not achieved results or universal recruitment standards. The customer must agree them before tuning.
+Prepare 45 synthetic CVs across three representative roles: 15 for development and 30 held out. Include missing, partial, ambiguous and conflicting evidence, unusual layouts and benign security terminology. Recruiters label the held out criteria; a second reviewer checks at least ten cases and all disagreements. Do not use the same AI as the authoritative judge of its own results.
+Gate
+Proposed threshold and measurement
+Category quality
+At least 85% exact category agreement overall and 80% within each role. Report per category counts; errors and unresolved responses stay in the denominator.
+Support quality
+Zero unsupported FULL or PARTIAL suggestions in the held out set after validation and human evidence audit. Invalid references must always be rejected.
+Critical misses
+Every customer designated essential requirement case is individually inspected; no unexplained essential false negative is accepted for release.
+Repeatability and two passes
+Repeat ten held out CVs three times. Report category changes and additional review burden. No claim of deterministic model output. Retain the second pass only with demonstrated benefit.
+Injection resistance
+At least 20 clean/adversarial pairs covering visible instructions, hidden text, Unicode and hostile output. Zero unauthorised reads, writes or requests. No unexplained attack related category improvement remains unresolved.
+Identity minimisation
+Known name/contact swaps produce identical minimised input in deterministic fixture tests. Repeat model comparisons for residual institution or employer cues; investigate changes beyond ordinary rerun variation.
+Workflow integrity
+All mandatory state, access, upload, retry, deletion and snapshot tests pass. Zero unresolved high or critical security findings.
+Actual usefulness
+Three timed 20 CV reviews target at least 25% less reviewer time than the same rubric used manually, without more adjudicated errors. Failure means simplify or revise the product, not skip oversight.
+The dataset is small and synthetic. Passing it supports a limited, supervised pilot, not a general claim of accuracy or fairness. Compare against a simple one pass baseline using the same rubric. Report shortlist differences and mistakes, not just an attractive average.
+Before real CVs, the employer approves purpose, lawful basis, candidate notice, DPIA assessment, processor contracts, transfers, access and retention. A London database does not make all processing UK exclusive: provider calls, logs, subprocessors, support and backups remain part of the data map. [S08, S11]
+Provide genuine human review for all applicants, an accessible correction route and clear explanation of AI assistance. Do not score protected characteristics, inferred personality, school prestige or unexplained career gaps. Criteria must be relevant to the role and accommodate appropriate equivalent evidence. Obtain qualified UK privacy or employment advice for the actual deployment; this specification is not a legal opinion.
+11. Customer handover, operations and cost
+Create the repository, Vercel team/project, Supabase organisation/project, AI provider project, billing and domain under customer control from the outset. Invite the developer temporarily. Managed hosting reduces server administration; it does not remove customer account setup or ongoing responsibility.
+Handover package:
+ source and release tag; lockfile and dependency notices; schema migrations, RLS and storage policies; parser snapshot build script and version; environment variable inventory without secrets; provider/prompt configuration; deployment and rollback instructions; tests and evaluation results; privacy data map; reviewer guide; and named support/incident responsibilities.
+Acceptance exercise:
+ a customer administrator signs in, invites a reviewer, creates a vacancy, uploads and reviews a synthetic batch, exports it, deletes the applications, and restores a test backup into a clean environment. Compare database counts and file hashes. Supabase database backups do not substitute for a separate backup and restore of stored document objects. Confirm those arrangements explicitly. [S15]
+Use the customer’s approved retention period, not an invented legal default. Document the lifecycle of source files, extracted text, model outputs, exports, logs and backups. Ensure deletion instructions are reapplied after a restore. Keep a minimal operational runbook for queue failures, provider outages, parser updates, access revocation and suspected breaches.
+After acceptance, rotate secrets where appropriate, remove developer access, confirm billing ownership and hand over recovery credentials securely. A transfer of repository ownership alone does not transfer the database, files, provider access, domain or authentication settings. Avoid migrating real applicant data by deploying cleanly to customer accounts before the pilot.
+Cost planning
+Current advertised starting subscriptions are $20 per month for Vercel Pro and $25 for Supabase Pro. Additional developer seats, compute, sandbox usage, storage, email delivery, tax and support may add costs. Budget approximately $60 to $100 per month for the small pilot as a planning allowance, not a supplier quote. [S18, S19]
+For an illustrative 80 CVs, two calls each, 6,000 input tokens and 1,200 output tokens per call, the direct Opus 5.5 list rates of $4/$20 per million give $7.68 for those assessment calls. This excludes rubric drafting, retries, larger outputs, reasoning usage, images and any regional premium. Do not promise “under £10” without measuring the complete pipeline. [S06]
+No batch inference service is required to save small token charges. Log actual usage without logging CV content. Add spend alerts and a hard application processing allowance; an alert alone is not a spend cap.
+Commercial handover:
+ agree code ownership, third party licences, acceptance criteria, support period and who is responsible for updates. Keep portability honest: this build is straightforward to redeploy in customer accounts, but replacing Supabase or a managed sandbox would still require engineering.
+12. GitHub references and what not to copy
+Repository READMEs were inspected as design references. No repository code was copied into the delivered prototype. Test counts and performance claims in those READMEs were not independently reproduced.
+Reference
+Useful pattern
+Limit or caution
+R01: lmbgithub/ai-resume-screening
+Separate verdicts from arithmetic and test pure scoring functions.
+MIT licence file checked. Do not adopt its unknown denominator removal, open access assumptions or custom minimal document parser.
+R02: SheinRG/ResumeRank
+Requirement, evidence and note together; explicit server role checks.
+Product scope is much larger. Do not inherit public company registration or the whole ATS. Licence not verified.
+R03: krishgoel20/Resume-Analyzer
+Source quotation validation and adversarial test cases.
+The model supplies scores and it uses LangGraph. Borrow validation ideas, not that scoring or orchestration design. Licence not verified.
+R04: rakeshsabbisetty2001/resume-screening-ai
+Paired identity changes, rerun noise floor and comparison against simple baselines.
+Its own reported ranking labels include AI labelling and results are mixed. Do not treat them as validation of this POC. Licence not verified.
+R05: msrshahrukh100/jev-resume-screener
+A later JEV comparison reference.
+It includes hiring verdicts and automatic best candidate selection. It is not the v1 architecture or an injection defence. Licence not verified.
+R06: shresss/screening-eval-bench
+Frozen fixtures, failure reporting and agreement metrics.
+README declares MIT; licence file not checked. Its authentic/tailored labels measure a different task from job suitability.
+Build from a clean application starter rather than fork one of these systems.
+ The useful reusable ideas are smaller than the surrounding products. Verify licences and dependency notices before importing any code. Public availability alone does not authorise reuse.
+Reference links
+[R01]
+Scoring reference and README
+ ·
+Checked MIT licence
+[R02]
+ResumeRank
+[R03]
+Resume Analyzer
+[R04]
+Resume screening and evaluation
+[R05]
+JEV résumé screener
+[R06]
+Screening evaluation bench
+Appendix A. Mandatory security addendum
+Status and precedence.
+ These are implementation requirements, not claims about the standalone HTML. They consolidate the security controls discussed for this project. The appendix supplements sections 5 to 10 and must not be removed as a hosting simplification. An unresolved mandatory security test blocks real applicant data. Synthetic demonstrations may run without a backend, but must be labelled accordingly.
+A1. Trust boundaries and minimum controls
+ID
+Mandatory implementation requirement
+Proof before a real pilot
+SEC01
+Treat CVs, job descriptions, extracted blocks and model responses as untrusted. Only a recruiter can publish criteria. Candidate material cannot alter instructions or weights.
+Inject instructions into all input surfaces; confirm published rubric, identifiers and points remain unchanged.
+SEC02
+No model tools, browsing, email, credentials, arbitrary URL retrieval or access to other applications. Use one application per inference context.
+Replace the model with hostile test output. No external action or cross application read occurs.
+SEC03
+Validate supported file signatures and limits. Parse only in a fresh sandbox with denied network access, no secrets, fixed commands and bounded resources. Never interpolate filenames into a shell command.
+Network and DNS probes fail; no controller secret is present; malformed and resource exhaustion fixtures are contained.
+SEC04
+Create source IDs in code. Check the exact criterion set, allowed category, current document and valid source references. Reject extra fields and fabricated quotes.
+Invalid and foreign references cannot produce a confirmed assessment. FULL and PARTIAL need genuine supporting passages.
+SEC05
+Treat a warning as a review task, not proof of an attack or grounds for rejection. Never assign points for detector output. A failure must remain visible.
+Flagged, unreadable and timed out CVs remain accounted for and cannot silently enter or leave a shortlist.
+SEC06
+Require application level review, individual essential/exception checks and a server verified finalisation transaction. Never use a checkbox value alone as authorisation.
+An unreviewed application, unresolved category, stale version or fourth selection blocks finalisation at the server.
+SEC07
+Restrict membership, require MFA for live access and check roles and row ownership on every request. Storage stays private. Privileged keys never reach the browser.
+Test an outsider, a removed member, a reviewer attempting admin actions and a forged record identifier. All prohibited operations fail.
+SEC08
+Render escaped text, not model HTML. No remote images, active document scripts, clickable injected commands or automatic link fetching. Protect CSV cells from formula execution.
+Hostile text stays inert in the browser and export. Test script markup and spreadsheet formula prefixes.
+The parser network default must be changed explicitly; Vercel documents unrestricted internet access as the default and a denied mode that also blocks DNS. A function having no API keys does not enforce this boundary. [S02]
+Schema validity, two matching AI calls and a real quotation do not prove the semantic assessment is correct. The scoring path remains under human authority. These controls reduce attack opportunities and consequences; they are not a guarantee against all attacks. [S13]
+Appendix A continued. Release and operations
+A2. Privacy, operations and test gates
+ID
+Mandatory implementation requirement
+Proof before a real pilot
+SEC09
+Keep CV content out of logs, traces, error trackers, analytics and replay recordings. Do not cache authenticated responses publicly or store real CVs in local browser storage.
+Inspect success and failure telemetry plus HTTP cache headers. The browser bundle and persisted state contain no service credentials or applicant records.
+SEC10
+Pin packages and the parser snapshot; commit a lockfile and apply security updates. Preview deployments and developer workspaces use synthetic data and separate secrets.
+Dependency review, secret scan, build manifest and isolated preview environment are recorded. Any high risk finding is resolved before live use.
+SEC11
+Approve processor contracts, retention, transfers and region settings for every service. Use only approved endpoints; no silent geographic or provider fallback.
+Customer approves a data flow inventory and exact deployed endpoint. A London database alone does not justify a UK exclusive claim.
+SEC12
+Make queue processing idempotent, cap retries and prevent stale commits. Support deletion, restricted exports and a tested restore of both database and document objects.
+Repeat delivery, timeout, deletion during processing and restore tests preserve correct state. A restored system reapplies outstanding deletions.
+Initial parser limits.
+ Enforce 5 MiB per input, 10 PDF pages, 50 MiB total expanded DOCX content, 500 archive entries, 100,000 extracted characters, a 30 second parser deadline and a tested process memory ceiling. These are proposed safety limits, not library promises. Count actual decompressed bytes, not just claimed ZIP metadata. Do not silently truncate. Use a longer overall sandbox deadline only for controlled setup and cleanup, not unlimited parsing.
+Output and cache controls.
+ Use a restrictive production Content Security Policy with nonces or hashes, not the offline prototype’s inline script allowance. Set private no store responses on sensitive routes. Check authorisation before issuing an expiring document URL and never log it. Prefer short lived download access and inert source views. Review model refusals, schema errors and exceptions without copying raw sensitive payloads into diagnostics. [S12, S13, S14]
+Adversarial suite.
+ At minimum use 20 clean and altered CV pairs covering visible and hidden instructions, formatting tricks, quoted security examples and score manipulation. Compare criterion outcomes before human intervention, not only final scores. Add hostile model output tests, foreign source IDs, duplicate queue delivery, concurrent review edits, unsafe CSV cells and access control attempts. Zero unauthorised actions, zero invalid evidence accepted and zero silent omissions are required. Unexplained assessment changes are investigated, not averaged away.
+Incident procedure.
+ A named customer administrator can pause intake and inference without deleting evidence. Preserve only necessary access and operation records, revoke affected sessions or credentials, investigate scope, then follow the approved incident and notification procedure. The employer decides notification obligations with its adviser; the software must not claim that every incident is automatically reportable.
+Release signoff.
+ The developer records results for SEC01 to SEC12. The customer’s responsible manager approves the data flow, reviewer training and supervised pilot scope. No real data pilot starts with an unresolved critical or high security issue. Model accuracy and review time gates in section 10 are separate: passing security tests does not validate recruitment accuracy. Recheck relevant gates after a model, prompt, parser, SDK, permission or hosting change.
+Handover evidence.
+ Include the completed control checklist, test fixtures, configuration manifest, restore record, retention settings and named incident owner in the customer release. The HTML prototype demonstrates workflow gates only; it does not implement these backend security controls.
+Source register
+Verified or inspected on 2 October 2026. Product limits, regional availability, SDKs and commercial terms must be checked again when deploying. Architecture limits and acceptance thresholds in this document are proposed design choices.
+[S01]
+Vercel AI SDK structured output
+ ·
+Deprecation notice
+[S02]
+Vercel Sandbox firewall
+[S03]
+Vercel Sandbox regions
+[S04]
+Supabase Queues and visibility semantics
+[S05]
+Claude structured output and citations compatibility
+[S06]
+Claude Opus availability and pricing
+[S07]
+Claude data residency
+[S08]
+Supabase GDPR responsibilities and residency limitations
+[S09]
+AI SDK Bedrock provider and structured output modes
+[S10]
+AWS Opus 5.5 model availability
+ · The model specific URL redirected to the general guide when checked; UK route remains a deployment verification item.
+[S11]
+ICO: meaningful human involvement in recruitment
+[S12]
+OWASP file upload guidance
+[S13]
+OWASP prompt injection prevention
+[S14]
+Supabase row level security
+[S15]
+Supabase database backup scope
+[S16]
+unpdf
+[S17]
+Mammoth document conversion and security
+[S18]
+Vercel pricing
+[S19]
+Supabase pricing
+Final release boundary:
+ this document and its synthetic interface are ready to guide implementation. The real backend, AI accuracy, privacy arrangements, sandbox isolation and production security remain to be built and tested through the stated gates.
