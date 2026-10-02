@@ -1,5 +1,6 @@
 "use client";
 import { ArrowRight, BriefcaseBusiness, Plus } from "lucide-react";
+import { Atmosphere } from "@/components/brand/atmosphere";
 import { Button } from "@/components/ui/button";
 import { NavLink, type Navigate } from "./nav-link";
 import { batchSummary, nextAction } from "./progress";
@@ -15,6 +16,41 @@ export function VacanciesHome({
   isAdmin: boolean;
   navigate: Navigate;
 }) {
+  // The single most useful next step across open vacancies.
+  const open = vacancies
+    .map((vacancy) => ({ vacancy, batch: vacancy.batches.at(-1)! }))
+    .filter(({ batch }) => !batch.snapshot);
+  const pick =
+    open.find(
+      ({ batch }) => batch.closed && batchSummary(batch).toReview > 0,
+    ) ?? open[0];
+  const focus =
+    pick &&
+    (() => {
+      const s = batchSummary(pick.batch);
+      const action = nextAction(pick.batch, isAdmin);
+      const sentence = !pick.batch.published
+        ? "The criteria are still a draft. Publish them to start adding CVs."
+        : !pick.batch.closed
+          ? s.active.length
+            ? `${s.active.length} CV${s.active.length === 1 ? " is" : "s are"} in this batch. Start the review when every file is ready.`
+            : "Criteria are published. Add CVs to begin."
+          : s.toReview > 0
+            ? `${s.toReview} CV${s.toReview === 1 ? " is" : "s are"} waiting for your review. Each one needs a person to confirm it.`
+            : "Every CV is reviewed. Compare the evidence and choose up to three.";
+      return {
+        vacancy: pick.vacancy,
+        action,
+        sentence,
+        meta: [pick.vacancy.team, pick.batch.label].filter(Boolean).join(" · "),
+        href: pathFor({
+          view: "batch",
+          vacancyId: pick.vacancy.id,
+          batchId: pick.batch.id,
+          step: action.step,
+        }),
+      };
+    })();
   return (
     <>
       <header className="pagehead">
@@ -33,6 +69,25 @@ export function VacanciesHome({
           </Button>
         )}
       </header>
+      {focus && (
+        <section className="focus-card" aria-labelledby="focus-title">
+          <Atmosphere />
+          <span className="focus-eyebrow">Pick up where you left off</span>
+          <h2 id="focus-title">{focus.vacancy.title}</h2>
+          <p>{focus.sentence}</p>
+          <div className="focus-actions">
+            <NavLink
+              className="focus-primary"
+              href={focus.href}
+              navigate={navigate}
+            >
+              {focus.action.label}
+              <ArrowRight aria-hidden="true" />
+            </NavLink>
+            <span className="focus-meta">{focus.meta}</span>
+          </div>
+        </section>
+      )}
       {vacancies.length === 0 ? (
         <section className="panel empty">
           <BriefcaseBusiness aria-hidden="true" />

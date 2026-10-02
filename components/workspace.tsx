@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { flushSync } from "react-dom";
 import { EyeOff, Eye, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,9 @@ export function WorkspaceApp({ initial = null }: { initial?: State | null }) {
   // The path is the source of truth for location. It only diverges from the
   // browser's pathname while a back/forward move is refused for unsaved work.
   const [path, setPath] = useState(pathname);
+  // Where we are going, updated synchronously; `path` may lag a frame behind
+  // while a view transition applies it.
+  const pathRef = useRef(pathname);
   const [unsaved, setUnsaved] = useState(false);
   const unsavedRef = useRef(false);
   const [state, setState] = useState<State | null>(initial),
@@ -89,36 +93,44 @@ export function WorkspaceApp({ initial = null }: { initial?: State | null }) {
     [jump, setJump] = useState(false),
     [reveal, setReveal] = useState(false);
   const firstRender = useRef(true);
+  const [condensed, setCondensed] = useState(false);
   useEffect(() => {
     unsavedRef.current = unsaved;
   }, [unsaved]);
 
-  const navigate: Navigate = useCallback(
-    (to, opts) => {
-      if (to === path) return true;
-      if (unsavedRef.current && !opts?.force) {
-        toast.info(leaveMessage);
-        return false;
-      }
-      window.history[opts?.replace ? "replaceState" : "pushState"](
-        null,
-        "",
-        to,
-      );
-      setPath(to);
-      return true;
-    },
-    [path],
-  );
-
-  // Browser back/forward: follow it, unless a draft would be lost.
-  useEffect(() => {
-    if (pathname === path) return;
-    if (unsavedRef.current) {
-      window.history.pushState(null, "", path);
+  const navigate: Navigate = useCallback((to, opts) => {
+    if (to === pathRef.current) return true;
+    if (unsavedRef.current && !opts?.force) {
       toast.info(leaveMessage);
-    } else setPath(pathname);
-  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+      return false;
+    }
+    pathRef.current = to;
+    window.history[opts?.replace ? "replaceState" : "pushState"](null, "", to);
+    // Cross-fade the content where the browser supports it.
+    const reduce = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    // Skip while an overlay is open or closing: its exit animation must
+    // finish on the live page, not inside a transition snapshot.
+    const overlay = document.querySelector("[role=dialog]");
+    if (document.startViewTransition && !reduce && !overlay)
+      document.startViewTransition(() => flushSync(() => setPath(to)));
+    else setPath(to);
+    return true;
+  }, []);
+
+  // Browser back/forward: follow it, unless a draft would be lost. Our own
+  // navigations already set pathRef, so they pass straight through.
+  useEffect(() => {
+    if (pathname === pathRef.current) return;
+    if (unsavedRef.current) {
+      window.history.pushState(null, "", pathRef.current);
+      toast.info(leaveMessage);
+    } else {
+      pathRef.current = pathname;
+      setPath(pathname);
+    }
+  }, [pathname]);
 
   const load = useCallback(async (revealNames = false) => {
     try {
@@ -160,6 +172,7 @@ export function WorkspaceApp({ initial = null }: { initial?: State | null }) {
   useEffect(() => {
     if (path === "/") {
       window.history.replaceState(null, "", "/vacancies");
+      pathRef.current = "/vacancies";
       setPath("/vacancies");
     }
   }, [path]);
@@ -181,6 +194,17 @@ export function WorkspaceApp({ initial = null }: { initial?: State | null }) {
     );
   }, [path]);
 
+  // Show where you are in the floating header once the page title scrolls away.
+  useEffect(() => {
+    const title = document.getElementById("page-title");
+    if (!title) return;
+    const io = new IntersectionObserver(
+      ([entry]) => setCondensed(!entry.isIntersecting),
+      { rootMargin: "-72px 0px 0px 0px" },
+    );
+    io.observe(title);
+    return () => io.disconnect();
+  }, [path, state]);
   const vacancyTitle = vacancy?.title;
   useEffect(() => {
     const where =
@@ -469,19 +493,26 @@ export function WorkspaceApp({ initial = null }: { initial?: State | null }) {
       />
       <main id="main-content" tabIndex={-1}>
         <div className="demo-banner">
-          <span className="demo-chip">
-            <FlaskConical aria-hidden="true" />
-            <span className="demo-long">
-              <strong>Synthetic proof of concept.</strong> Fictional CVs only.
-              Real applicant data is disabled.
-              {state?.temporaryPublic &&
-                " Temporary access: no sign-in required."}
+          {condensed && route.view === "batch" && vacancy ? (
+            <span className="here">
+              <strong>{vacancy.title}</strong>
+              <span>· {steps[route.step]}</span>
             </span>
-            <span className="demo-short">
-              <strong>Synthetic POC</strong> · fictional CVs only
-              {state?.temporaryPublic && " · open pilot"}
+          ) : (
+            <span className="demo-chip">
+              <FlaskConical aria-hidden="true" />
+              <span className="demo-long">
+                <strong>Synthetic proof of concept.</strong> Fictional CVs only.
+                Real applicant data is disabled.
+                {state?.temporaryPublic &&
+                  " Temporary access: no sign-in required."}
+              </span>
+              <span className="demo-short">
+                <strong>Synthetic POC</strong> · fictional CVs only
+                {state?.temporaryPublic && " · open pilot"}
+              </span>
             </span>
-          </span>
+          )}
           <span className="save-status" role="status">
             {busy
               ? "Saving changes…"

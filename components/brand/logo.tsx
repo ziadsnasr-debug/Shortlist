@@ -26,7 +26,7 @@ export function LogoMark({
         width="13"
         height="3.4"
         rx="1.7"
-        fill="currentColor"
+        fill="var(--logo-rest, currentColor)"
       />
       <rect
         x="3"
@@ -34,7 +34,7 @@ export function LogoMark({
         width="8"
         height="3.4"
         rx="1.7"
-        fill="currentColor"
+        fill="var(--logo-rest, currentColor)"
       />
     </svg>
   );

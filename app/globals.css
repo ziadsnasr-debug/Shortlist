@@ -4,46 +4,47 @@
 /* Design tokens. Values are OKLCH-derived and contrast-checked (docs/DESIGN.md).
    Light is the default; dark is selected by next-themes via data-theme. */
 :root {
-  --background: #f7fbfc;
-  --foreground: #122228;
-  --card: #fdffff;
-  --card-foreground: #122228;
-  --popover: #fdffff;
-  --popover-foreground: #122228;
-  --surface-2: #eff5f6;
-  --primary: #007463;
-  --primary-hover: #006555;
-  --primary-foreground: #fdffff;
-  --secondary: #dff6f0;
-  --secondary-foreground: #122228;
-  --accent: #eff5f6;
-  --accent-foreground: #122228;
-  --muted: #e6eef0;
-  --muted-foreground: #49585d;
-  --subtle-foreground: #636e72;
-  --border: #dce3e5;
-  --border-strong: #c4cccf;
+  --background: #f7f7f8;
+  --foreground: #18181b;
+  --card: #fdfdfd;
+  --card-foreground: #18181b;
+  --popover: #fdfdfd;
+  --popover-foreground: #18181b;
+  --surface-2: #f0f0f2;
+  --primary: #27272a;
+  --primary-hover: #3f3f46;
+  --primary-foreground: #fafafa;
+  --secondary: #ececef;
+  --secondary-foreground: #18181b;
+  --accent: #f0f0f2;
+  --accent-foreground: #18181b;
+  --muted: #e7e7ea;
+  --muted-foreground: #52525b;
+  --subtle-foreground: #6b6b74;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
   --accent-border: color-mix(in oklab, var(--primary) 40%, var(--border));
-  --input: #838e92;
-  --ring: #007463;
-  --destructive: #ba3535;
-  --destructive-foreground: #fdffff;
-  --success: #2b7440;
-  --warning: #935a11;
-  --ev-full: #006e5e;
-  --ev-partial: #6bbdab;
-  --ev-none: #dadfe0;
-  --ev-unclear: #f2af48;
-  --sidebar: #051e27;
-  --sidebar-foreground: #e5edee;
-  --sidebar-muted: #9da7a9;
-  --sidebar-hover: #112a33;
-  --sidebar-active: #15353d;
-  --sidebar-border: #22363e;
-  --sidebar-accent: #54b9a5;
-  --logo-accent: var(--primary);
+  --input: #8e8e96;
+  --ring: #52525b;
+  --destructive: #a13838;
+  --destructive-foreground: #fdfdfd;
+  --success: #3f4b58;
+  --warning: #8a6418;
+  --ev-full: #27272a;
+  --ev-partial: #8e8e96;
+  --ev-none: #e4e4e7;
+  --ev-unclear: #d9b867;
+  --sidebar: #161618;
+  --sidebar-foreground: #f4f4f5;
+  --sidebar-muted: #a1a1aa;
+  --sidebar-hover: #202023;
+  --sidebar-active: #29292d;
+  --sidebar-border: #2a2a2e;
+  --sidebar-accent: #ffffff;
+  --logo-accent: var(--subtle-foreground);
+  --shadow-xs: 0 1px 2px rgb(24 24 27 / 0.05);
   --shadow-overlay:
-    0 1px 2px rgb(5 30 39 / 0.06), 0 8px 24px rgb(5 30 39 / 0.1);
+    0 1px 2px rgb(24 24 27 / 0.06), 0 12px 32px rgb(24 24 27 / 0.12);
 
   --radius: 0.5rem;
   --dur-press: 100ms;
@@ -56,39 +57,39 @@
   color-scheme: light;
 }
 :root[data-theme="dark"] {
-  --background: #091114;
-  --foreground: #e5edee;
-  --card: #0f191d;
-  --card-foreground: #e5edee;
-  --popover: #0f191d;
-  --popover-foreground: #e5edee;
-  --surface-2: #172125;
-  --primary: #54b9a5;
-  --primary-hover: #6cc7b4;
-  --primary-foreground: #051e27;
-  --secondary: #12302b;
-  --secondary-foreground: #e5edee;
-  --accent: #172125;
-  --accent-foreground: #e5edee;
-  --muted: #1c272b;
-  --muted-foreground: #9da7a9;
-  --subtle-foreground: #7e888b;
-  --border: #253034;
-  --border-strong: #354246;
-  --input: #657175;
-  --ring: #54b9a5;
-  --destructive: #e07a6e;
-  --destructive-foreground: #091114;
-  --success: #73c385;
-  --warning: #eeb154;
-  --ev-full: #4db39e;
-  --ev-partial: #2f7063;
-  --ev-none: #2d3437;
-  --ev-unclear: #e8aa4e;
-  --sidebar: #050f13;
-  --sidebar-hover: #0d1d23;
-  --sidebar-active: #12282f;
-  --sidebar-border: #1a2a30;
+  --background: #0e0e10;
+  --foreground: #ececee;
+  --card: #161618;
+  --card-foreground: #ececee;
+  --popover: #161618;
+  --popover-foreground: #ececee;
+  --surface-2: #1e1e21;
+  --primary: #ececee;
+  --primary-hover: #ffffff;
+  --primary-foreground: #18181b;
+  --secondary: #26262a;
+  --secondary-foreground: #ececee;
+  --accent: #1e1e21;
+  --accent-foreground: #ececee;
+  --muted: #232327;
+  --muted-foreground: #a1a1aa;
+  --subtle-foreground: #85858e;
+  --border: #27272b;
+  --border-strong: #37373c;
+  --input: #66666e;
+  --ring: #a1a1aa;
+  --destructive: #e08a80;
+  --destructive-foreground: #0e0e10;
+  --success: #aab6c3;
+  --warning: #d6b46a;
+  --ev-full: #e4e4e7;
+  --ev-partial: #71717a;
+  --ev-none: #27272b;
+  --ev-unclear: #c9a85a;
+  --sidebar: #0b0b0c;
+  --sidebar-hover: #18181b;
+  --sidebar-active: #222225;
+  --sidebar-border: #222225;
   --shadow-overlay: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.4);
   color-scheme: dark;
 }
@@ -211,6 +212,7 @@ p {
 .brand {
   color: var(--sidebar-foreground);
   --logo-accent: var(--sidebar-accent);
+  --logo-rest: var(--sidebar-muted);
 }
 .sidebar nav {
   display: flex;
@@ -2695,4 +2697,333 @@ receipt and finish mark. */
     clip-path: inset(50%);
     white-space: nowrap;
   }
+}
+
+/* Brand moments: atmosphere, focus card, floating header, page transitions. */
+.atmosphere {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      60% 55% at 72% 36%,
+      rgb(255 255 255 / 0.16),
+      transparent 70%
+    ),
+    radial-gradient(
+      45% 50% at 18% 88%,
+      rgb(161 161 170 / 0.14),
+      transparent 72%
+    ),
+    linear-gradient(160deg, #1c1c1f 0%, #26262a 52%, #121214 100%);
+}
+.atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgb(18 18 20 / 0.55));
+}
+.atmo-bar {
+  position: absolute;
+  height: 13%;
+  border-radius: 999px;
+  background: linear-gradient(
+    120deg,
+    rgb(244 244 245 / 0.2),
+    rgb(212 212 216 / 0.08) 55%,
+    rgb(244 244 245 / 0.04)
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    inset 0 -12px 24px rgb(0 0 0 / 0.25),
+    0 24px 60px rgb(0 0 0 / 0.25);
+  transform: rotate(-14deg);
+}
+.atmo-bar-1 {
+  top: 18%;
+  left: 38%;
+  width: 70%;
+  background: linear-gradient(
+    120deg,
+    rgb(255 255 255 / 0.34),
+    rgb(212 212 216 / 0.12) 60%,
+    rgb(244 244 245 / 0.05)
+  );
+}
+.atmo-bar-2 {
+  top: 36%;
+  left: 30%;
+  width: 52%;
+}
+.atmo-bar-3 {
+  top: 54%;
+  left: 22%;
+  width: 34%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .atmo-bar {
+    animation: atmo-drift 16s var(--ease-in-out) infinite alternate;
+  }
+  .atmo-bar-2 {
+    animation-duration: 19s;
+    animation-delay: -4s;
+  }
+  .atmo-bar-3 {
+    animation-duration: 22s;
+    animation-delay: -9s;
+  }
+}
+@keyframes atmo-drift {
+  from {
+    transform: translate3d(0, 0, 0) rotate(-14deg);
+  }
+  to {
+    transform: translate3d(-4%, 3%, 0) rotate(-11deg);
+  }
+}
+
+.focus-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: grid;
+  gap: 18px;
+  align-content: end;
+  min-height: 220px;
+  padding: 28px 32px;
+  margin-bottom: 20px;
+  border-radius: 16px;
+  color: #f4f4f5;
+}
+.focus-card .atmosphere {
+  z-index: -1;
+}
+.focus-card .focus-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+}
+.focus-card .focus-eyebrow::before {
+  content: "";
+  width: 28px;
+  height: 1px;
+  background: currentColor;
+}
+.focus-card h2 {
+  font-size: clamp(26px, 3.2vw, 40px);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  color: #fafafa;
+  max-width: 18ch;
+}
+.focus-card p {
+  color: #c4c4c9;
+  max-width: 48ch;
+  font-size: 14px;
+}
+.focus-card .focus-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.focus-card .focus-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: #fafafa;
+  color: #18181b;
+  font-weight: 500;
+  font-size: 14px;
+  text-decoration: none;
+  transition:
+    transform var(--dur-press) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+.focus-card .focus-primary:hover {
+  background: #e4e4e7;
+}
+.focus-card .focus-primary:active {
+  transform: scale(0.97);
+}
+.focus-card .focus-primary:focus-visible {
+  outline: 2px solid #f4f4f5;
+  outline-offset: 3px;
+}
+.focus-card .focus-primary svg {
+  width: 16px;
+  height: 16px;
+}
+.focus-card .focus-meta {
+  font: 400 12px/1.4 var(--font-mono);
+  color: #9da7a9;
+}
+@media (max-width: 680px) {
+  .focus-card {
+    min-height: 200px;
+    padding: 22px 20px;
+    border-radius: 14px;
+  }
+}
+
+/* Floating header: stays with you on long pages. */
+.demo-banner {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  background: color-mix(in oklab, var(--background) 82%, transparent);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+}
+.here {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--foreground);
+}
+.here strong {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.here span {
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .here {
+    animation: here-in var(--dur-base) var(--ease-out);
+  }
+}
+@keyframes here-in {
+  from {
+    transform: translateY(4px);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .demo-banner {
+    background: var(--background);
+    backdrop-filter: none;
+  }
+}
+@media (max-width: 767px) {
+  .demo-banner {
+    top: 64px;
+  }
+}
+
+/* Page changes cross-fade the content only; navigation stays put. */
+.page {
+  view-transition-name: page;
+}
+::view-transition-old(page) {
+  animation: vt-out 120ms var(--ease-out) both;
+}
+::view-transition-new(page) {
+  animation: vt-in 220ms var(--ease-out) both;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(page),
+  ::view-transition-new(page) {
+    animation: none;
+  }
+}
+/* On the wide focus card the bars sit right of the text, sized to the card. */
+.focus-card .atmo-bar {
+  height: 56px;
+}
+.focus-card .atmo-bar-1 {
+  top: 22%;
+  left: 62%;
+  width: 380px;
+}
+.focus-card .atmo-bar-2 {
+  top: 46%;
+  left: 58%;
+  width: 280px;
+}
+.focus-card .atmo-bar-3 {
+  top: 70%;
+  left: 54%;
+  width: 180px;
+}
+.focus-card .atmosphere::after {
+  background: linear-gradient(
+    90deg,
+    rgb(18 18 20 / 0.88) 0%,
+    rgb(18 18 20 / 0.55) 40%,
+    transparent 70%
+  );
+}
+@media (max-width: 760px) {
+  .focus-card .atmo-bar-1 {
+    left: 55%;
+    width: 220px;
+  }
+  .focus-card .atmo-bar-2 {
+    left: 62%;
+    width: 160px;
+  }
+  .focus-card .atmo-bar-3 {
+    display: none;
+  }
+}
+
+/* One icon voice: Lucide at a finer, consistent stroke. */
+svg.lucide {
+  stroke-width: 1.75;
+}
+
+/* Surfaces separate with a hairline border and a whisper of shadow. */
+.panel,
+.vacancy-list,
+.file-list,
+.results,
+.criteria-review .assessment,
+.review-zones .source,
+.steps .step,
+.upload,
+.finish-receipt {
+  box-shadow: var(--shadow-xs);
+}
+:root[data-theme="dark"] {
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+}
+.steps .step.active {
+  background: var(--card);
+  border-color: var(--foreground);
+  box-shadow:
+    var(--shadow-xs),
+    inset 0 0 0 1px var(--foreground);
+}
+.steps .step.active strong {
+  color: var(--foreground);
 }
