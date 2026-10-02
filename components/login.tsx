@@ -8,6 +8,7 @@ export default function Login() {
   const router = useRouter();
   const [factor, setFactor] = useState<string | null>(null),
     [qr, setQr] = useState(""),
+    [setupKey, setSetupKey] = useState(""),
     [error, setError] = useState(""),
     [signed, setSigned] = useState(false),
     [busy, setBusy] = useState(false);
@@ -34,8 +35,8 @@ export default function Login() {
     <main className="login panel">
       <h1>Shortlist sign in</h1>
       <p className="mb-5">
-        Invited workspace members only. Multi-factor authentication is required
-        for Supabase access.
+        Invited workspace members only. An authenticator code protects your workspace
+        after you sign in.
       </p>
       {error && (
         <p role="alert" className="mb-4">
@@ -92,6 +93,7 @@ export default function Login() {
             if (d) {
               setFactor(d.factorId);
               setQr(d.qr);
+              setSetupKey(d.secret);
             }
           }}
         >
@@ -117,11 +119,22 @@ export default function Login() {
               <p>Scan this private QR code with your authenticator.</p>
               {/* Supabase-generated QR is an image, never injected markup. */}
               <img
-                src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(qr)}`}
+                src={qr}
                 alt="Authenticator setup QR"
                 width="200"
                 height="200"
               />
+              {setupKey && (
+                <details className="my-4">
+                  <summary>Can’t scan? Enter a setup key instead</summary>
+                  <p className="mt-3">
+                    In your authenticator app, add an account manually. Name it
+                    Shortlist, choose a time-based code, and enter this private key:
+                  </p>
+                  <code className="block break-all select-all my-3">{setupKey}</code>
+                  <p>Then enter the six-digit code from your authenticator below.</p>
+                </details>
+              )}
             </>
           )}
           <Field>
