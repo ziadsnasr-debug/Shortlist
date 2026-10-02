@@ -131,7 +131,7 @@ export default function Login() {
     <div className="flex min-h-dvh flex-col bg-background text-foreground min-[900px]:grid min-[900px]:grid-cols-[2fr_3fr]">
       <header className="relative isolate flex h-14 shrink-0 items-center overflow-hidden bg-sidebar px-4 text-sidebar-foreground min-[900px]:sticky min-[900px]:top-0 min-[900px]:h-dvh min-[900px]:flex-col min-[900px]:items-start min-[900px]:justify-between min-[900px]:px-12 min-[900px]:py-12">
         <Atmosphere className="-z-10 hidden min-[900px]:block" />
-        <div className="[--logo-accent:var(--sidebar-accent)]">
+        <div className="[--logo-accent:var(--sidebar-accent)] [--logo-rest:var(--sidebar-muted)]">
           <Logo className="gap-2.5 text-lg font-semibold tracking-[-0.02em]" />
         </div>
         <div className="hidden max-w-md min-[900px]:block">

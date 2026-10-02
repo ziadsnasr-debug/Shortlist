@@ -126,16 +126,28 @@ test("the command menu jumps to steps and respects unsaved drafts", async ({
   const menu = page.getByRole("dialog", { name: "Jump to" });
   await expect(menu).toBeVisible();
   await menu.getByRole("combobox").fill("Add CVs");
+  // Wait for the menu to highlight a match, as a person would see it.
+  await expect(
+    menu.getByRole("option", { name: /Add CVs/ }).first(),
+  ).toHaveAttribute("aria-selected", "true");
   await page.keyboard.press("Enter");
   await expect(menu).toBeHidden();
   await expect(page).toHaveURL(/\/cvs$/);
   await page.getByRole("button", { name: /Jump to/ }).click();
   await menu.getByRole("combobox").fill("Criteria");
+  // Wait for the menu to highlight a match, as a person would see it.
+  await expect(
+    menu.getByRole("option", { name: /Criteria/ }).first(),
+  ).toHaveAttribute("aria-selected", "true");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/criteria$/);
   await page.getByLabel("Points", { exact: true }).first().fill("9");
   await page.keyboard.press("ControlOrMeta+k");
   await menu.getByRole("combobox").fill("Vacancies");
+  // Wait for the menu to highlight a match, as a person would see it.
+  await expect(
+    menu.getByRole("option", { name: /Vacancies/ }).first(),
+  ).toHaveAttribute("aria-selected", "true");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/criteria$/);
   await expect(

@@ -110,7 +110,10 @@ export function WorkspaceApp({ initial = null }: { initial?: State | null }) {
     const reduce = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-    if (document.startViewTransition && !reduce)
+    // Skip while an overlay is open or closing: its exit animation must
+    // finish on the live page, not inside a transition snapshot.
+    const overlay = document.querySelector("[role=dialog]");
+    if (document.startViewTransition && !reduce && !overlay)
       document.startViewTransition(() => flushSync(() => setPath(to)));
     else setPath(to);
     return true;
