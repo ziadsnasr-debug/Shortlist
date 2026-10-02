@@ -52,9 +52,10 @@ export async function POST(req: NextRequest) {
     await rateLimit(access.actor, "admin-write", 10, 60);
     const db = databaseClient();
     if (input.type === "process") {
+      const deadline = Date.now() + 220000;
       const result = {
-        ...(await consumeDocuments()),
-        deletions: await recoverDeletions(),
+        ...(await consumeDocuments(deadline)),
+        deletions: await recoverDeletions(deadline),
       };
       const { error } = await db.from("audit_events").insert({
         workspace_id: access.workspaceId,

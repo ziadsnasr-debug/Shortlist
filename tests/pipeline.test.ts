@@ -77,6 +77,18 @@ it("disabled AI produces manual unresolved work without network calls", async ()
     Object.values(result.assessments).every((a) => a.category === "UNCLEAR"),
   ).toBe(true);
 });
+it("does not start a second model pass after the shared processing signal expires", async () => {
+  enable();
+  const controller = new AbortController();
+  mock.generate.mockImplementationOnce(async () => {
+    controller.abort(new DOMException("Deadline exceeded", "TimeoutError"));
+    return { output: { criteria: [] }, usage: {} };
+  });
+  await expect(assess(app(), sampleRubric, undefined, controller.signal)).rejects.toMatchObject({
+    name: "TimeoutError",
+  });
+  expect(mock.generate).toHaveBeenCalledTimes(1);
+});
 it("AI criteria cannot silently publish invalid weights", async () => {
   enable();
   mock.generate.mockResolvedValue({
@@ -125,6 +137,28 @@ it("denied network, empty sandbox env and cleanup hold on malformed output", asy
   expect(JSON.stringify(write.mock.calls)).not.toContain(
     "synthetic-placeholder",
   );
+});
+it("cancels sandbox work while using a fresh signal for cleanup", async () => {
+  process.env.PARSER_SNAPSHOT_ID = "synthetic-snapshot";
+  process.env.PARSER_BUNDLE_SHA256 = "a".repeat(64);
+  const controller = new AbortController();
+  const stop = vi.fn().mockResolvedValue(undefined);
+  mock.create.mockResolvedValue({
+    runCommand: vi.fn().mockResolvedValue({
+      exitCode: 0,
+      stdout: async () => process.env.PARSER_BUNDLE_SHA256 + "  /opt/shortlist/runner.mjs",
+    }),
+    writeFiles: async () => {
+      controller.abort(new DOMException("Deadline exceeded", "TimeoutError"));
+      throw controller.signal.reason;
+    },
+    stop,
+  });
+  await expect(parseInSandbox(Buffer.from("%PDF-1.7"), controller.signal))
+    .rejects.toMatchObject({ name: "TimeoutError" });
+  expect(mock.create.mock.calls[0][0].signal).toBe(controller.signal);
+  expect(stop).toHaveBeenCalledTimes(1);
+  expect(stop.mock.calls[0][0].signal.aborted).toBe(false);
 });
 it("sandbox output must bind to actual transferred bytes", async () => {
   process.env.PARSER_SNAPSHOT_ID = "synthetic-snapshot";

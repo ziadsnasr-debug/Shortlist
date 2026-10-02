@@ -624,6 +624,7 @@ try {
   const completeArgs = {
     p_document: documentId,
     p_key: document.processing_key,
+    p_generation: 0,
     p_result: result,
     p_outputs: [null, null],
     p_usage: [],
@@ -640,6 +641,53 @@ try {
     (await db.rpc("document_attempt", { p_document: documentId })).data ===
       false,
     "Fourth processing attempt must be refused.",
+  );
+  const beforeStale = (
+    await db
+      .from("synthetic_workspaces")
+      .select("payload,version")
+      .eq("workspace_id", workspaceId)
+      .single()
+  ).data!;
+  const stalePayload = structuredClone(beforeStale.payload) as Workspace;
+  const staleApp = stalePayload.vacancies
+    .find((v) => v.id === base.vacancyId)
+    ?.batches.find((b) => b.id === nextBatch.id)
+    ?.applications.find((a) => a.id === appKey);
+  assert(staleApp);
+  staleApp.state = "ready";
+  stalePayload.version = beforeStale.version + 1;
+  assert(
+    !(
+      await db
+        .from("synthetic_workspaces")
+        .update({ payload: stalePayload, version: stalePayload.version })
+        .eq("workspace_id", workspaceId)
+    ).error,
+  );
+  assert(
+    (await db.rpc("complete_document", completeArgs)).data === false,
+    "Late success cannot overwrite a manually handled application.",
+  );
+  assert(
+    (
+      await db.rpc("complete_document", {
+        ...completeArgs,
+        p_result: null,
+        p_error: "PROCESSING_UNAVAILABLE",
+      })
+    ).data === false,
+    "Late failure cannot turn a manually handled application into attention.",
+  );
+  staleApp.state = "processing";
+  stalePayload.version++;
+  assert(
+    !(
+      await db
+        .from("synthetic_workspaces")
+        .update({ payload: stalePayload, version: stalePayload.version })
+        .eq("workspace_id", workspaceId)
+    ).error,
   );
   assert(
     (
@@ -662,20 +710,80 @@ try {
         p_workspace: workspaceId,
         p_actor: admin.id,
         p_document: documentId,
+        p_config: "test-v1",
+      })
+    ).data === true,
+    "Same-configuration retry should be available.",
+  );
+  assert(
+    (await db.rpc("document_attempt", { p_document: documentId, p_generation: 1 })).data === true,
+    "Current retry generation must be claimable before testing a late result.",
+  );
+  assert(
+    (await db.rpc("complete_document", completeArgs)).data === false,
+    "Prior generation cannot commit even when the processing key is unchanged.",
+  );
+  assert(
+    (await db.rpc("document_attempt", { p_document: documentId })).data === false,
+    "Prior generation cannot reserve a paid attempt after retry.",
+  );
+  assert(
+    (
+      await db.rpc("complete_document", {
+        ...completeArgs,
+        p_generation: 1,
+        p_result: null,
+        p_error: "PROCESSING_CONFIGURATION_CHANGED",
+      })
+    ).data === true,
+    "The current generation can return the item to attention.",
+  );
+  assert(
+    (
+      await db.rpc("retry_document", {
+        p_workspace: workspaceId,
+        p_actor: admin.id,
+        p_document: documentId,
         p_config: "test-v2",
       })
     ).data === true,
     "Explicit retry should recover attention state.",
   );
   assert(
-    (await db.rpc("document_attempt", { p_document: documentId })).data ===
+    (await read(adminCookie)).vacancies[0].batches
+      .at(-1)
+      .applications.find((a: { id: string }) => a.id === appKey).state ===
+      "processing",
+    "Retry must restore processing state before the worker can complete.",
+  );
+  const retryMessages = Number(
+    execFileSync("docker", [
+      "exec",
+      "supabase_db_shortlist-local",
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      "postgres",
+      "-At",
+      "-c",
+      `select count(*) from pgmq.q_shortlist_documents where message->>'document_id'='${documentId}';`,
+    ], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim(),
+  );
+  assert(retryMessages === 1, "Retry must archive an old unacknowledged delivery.");
+  assert(
+    (await db.rpc("document_attempt", { p_document: documentId, p_generation: 2 })).data ===
       true,
   );
   const retried = (await db.from("documents").select("processing_key,processing_config").eq("id", documentId).single()).data!;
   assert(retried.processing_config === "test-v2", "Explicit retry pins the new configuration.");
   assert((await db.rpc("complete_document", completeArgs)).data === false, "Previous configuration cannot commit after retry.");
   completeArgs.p_key = retried.processing_key;
-  const completion = await db.rpc("complete_document", completeArgs);
+  completeArgs.p_generation = 2;
+  const completion = await db.rpc("complete_document", {
+    ...completeArgs,
+    p_result: { ...result, state: "readable_copy" },
+  });
   assert(!completion.error && completion.data, "Atomic completion failed.");
   assert(
     (await db.rpc("complete_document", completeArgs)).data === true,
@@ -693,6 +801,40 @@ try {
   assert(
     (await db.from("source_blocks").select("id").eq("document_id", documentId))
       .data!.length === 1,
+  );
+  const firstRun = (
+    await db.from("assessment_runs").select("id").eq("document_id", documentId).single()
+  ).data!.id;
+  assert(
+    (
+      await db.rpc("retry_document", {
+        p_workspace: workspaceId,
+        p_actor: admin.id,
+        p_document: documentId,
+        p_config: "test-v2",
+      })
+    ).data === true,
+    "Readable-copy retry with unchanged configuration must be available.",
+  );
+  assert(
+    (await db.rpc("document_attempt", { p_document: documentId, p_generation: 3 })).data === true,
+  );
+  assert(
+    (await db.rpc("complete_document", completeArgs)).data === false,
+    "An old readable-copy generation cannot commit after retry.",
+  );
+  completeArgs.p_generation = 3;
+  assert((await db.rpc("complete_document", completeArgs)).data === true);
+  const afterReadableRetry = (
+    await db.from("assessment_runs")
+      .select("id,processing_generation")
+      .eq("document_id", documentId)
+  ).data!;
+  assert(
+    afterReadableRetry.length === 2 &&
+      afterReadableRetry.some((run) => run.id === firstRun && run.processing_generation === 2) &&
+      afterReadableRetry.some((run) => run.id !== firstRun && run.processing_generation === 3),
+    "Same-key retry must keep both distinct historical assessment runs.",
   );
   assert(
     (await read(adminCookie)).vacancies[0].batches
@@ -781,12 +923,14 @@ try {
       .eq("id", secondDoc)
       .single()
   ).data!.processing_key;
+  assert((await db.rpc("document_attempt", { p_document: secondDoc })).data === true);
   assert(
     (
       await db.rpc("complete_document", {
         ...completeArgs,
         p_document: secondDoc,
         p_key: secondKey,
+        p_generation: 0,
         p_result: { ...result, id: secondApp, runId: secondDoc },
       })
     ).data === true,
@@ -863,6 +1007,55 @@ try {
     await db.rpc("record_id", { p_workspace: workspaceId, p_key: appKey })
   ).data;
   assert(
+    (
+      await db.rpc("finish_deletion", {
+        p_workspace: workspaceId,
+        p_entity: entity,
+      })
+    ).error,
+    "A live signed upload authorization must keep deletion pending.",
+  );
+  assert(
+    !(
+      await db.storage
+        .from("cv-originals")
+        .remove([`${workspaceId}/${documentId}`])
+    ).error,
+  );
+  assert(
+    (
+      await fetch(scope.signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "application/pdf" },
+        body: originalBytes,
+      })
+    ).ok,
+    "A still-valid signed token can recreate a deleted original.",
+  );
+  assert(
+    !(
+      await db.storage
+        .from("cv-originals")
+        .remove([`${workspaceId}/${documentId}`])
+    ).error,
+    "Final sweep must remove a replayed signed upload.",
+  );
+  execFileSync(
+    "docker",
+    [
+      "exec",
+      "supabase_db_shortlist-local",
+      "psql",
+      "-U",
+      "postgres",
+      "-d",
+      "postgres",
+      "-c",
+      `update public.deletion_ledger set ready_after=now()-interval '1 second' where workspace_id='${workspaceId}' and entity_id='${entity}';`,
+    ],
+    { stdio: "ignore" },
+  );
+  assert(
     !(
       await db.rpc("finish_deletion", {
         p_workspace: workspaceId,
@@ -878,6 +1071,7 @@ try {
     JSON.stringify({
       workspaceId,
       at: new Date().toISOString(),
+      count: currentLedger.length,
       ledger: currentLedger,
     }),
     { mode: 0o600 },

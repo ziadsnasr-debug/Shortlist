@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { pagedRows, type RecoveryDocument } from "../lib/recovery-export";
 import { hash } from "../lib/pipeline/contracts";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
   key = process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -15,32 +16,46 @@ const { data: state, error: se } = await db
   .select("*")
   .eq("workspace_id", workspace)
   .single();
-const { data: documents, error: de } = await db
-  .from("documents")
-  .select("*")
-  .eq("workspace_id", workspace)
-  .eq("deletion_state", "retained");
-const { data: ledger, error: le } = await db
-  .from("deletion_ledger")
-  .select("*")
-  .eq("workspace_id", workspace);
-if (se || de || le) throw new Error("Backup query failed.");
-const { data: audit, error: ae } = await db
-  .from("audit_events")
-  .select("*")
-  .eq("workspace_id", workspace);
-if (ae) throw new Error("Audit backup incomplete.");
+const documents = await pagedRows<RecoveryDocument>(db, "documents", {
+  workspace_id: workspace,
+  deletion_state: "retained",
+});
+const ledger = await pagedRows(db, "deletion_ledger", {
+  workspace_id: workspace,
+});
+if (se) throw new Error("Backup query failed.");
+const audit = await pagedRows(db, "audit_events", { workspace_id: workspace });
 const runs = [],
   sources = [],
   reviews = [],
   objects = [];
 for (const document of documents ?? []) {
+  // Reservations without completed upload have no original yet. Preserve the row.
+  if (document.status === "reserved" && !document.hash) {
+    const present = await db.storage
+      .from("cv-originals")
+      .exists(document.private_object_key);
+    if (present.error) {
+      const detail = present.error as unknown as {
+        status?: number;
+        originalError?: { status?: number };
+      };
+      const status = detail.status ?? detail.originalError?.status;
+      // Storage HEAD expresses an absent object as false plus a 400/404 error.
+      // Authentication, transport and all other errors still abort the backup.
+      if (!(present.data === false && (status === 400 || status === 404)))
+        throw new Error("Reserved object status unavailable.");
+    }
+    if (!present.data) continue;
+  }
   const { data: file, error } = await db.storage
     .from("cv-originals")
     .download(document.private_object_key);
   if (error || !file)
     throw new Error("Original object unavailable; backup incomplete.");
   const bytes = Buffer.from(await file.arrayBuffer());
+  if (document.hash && hash(bytes) !== document.hash)
+    throw new Error("Original/document hash mismatch; backup incomplete.");
   await writeFile(resolve(destination, document.id + ".bin"), bytes, {
     mode: 0o600,
   });
@@ -49,19 +64,16 @@ for (const document of documents ?? []) {
     sha256: hash(bytes),
     bytes: bytes.length,
   });
-  const [
-    { data: r, error: re },
-    { data: s, error: be },
-    { data: review, error: ve },
-  ] = await Promise.all([
-    db.from("assessment_runs").select("*").eq("document_id", document.id),
-    db.from("source_blocks").select("*").eq("document_id", document.id),
-    db
-      .from("application_reviews")
-      .select("*")
-      .eq("application_id", document.application_id),
+  const [r, s, review] = await Promise.all([
+    pagedRows(db, "assessment_runs", { document_id: document.id }),
+    pagedRows(db, "source_blocks", { document_id: document.id }),
+    pagedRows(
+      db,
+      "application_reviews",
+      { application_id: document.application_id },
+      "application_id",
+    ),
   ]);
-  if (re || be || ve) throw new Error("Source backup incomplete.");
   runs.push(...r);
   sources.push(...s);
   reviews.push(...review);
@@ -89,6 +101,15 @@ await writeFile(
     reviews,
     objects,
     ledger,
+    counts: {
+      documents: documents.length,
+      runs: runs.length,
+      sources: sources.length,
+      reviews: reviews.length,
+      objects: objects.length,
+      ledger: ledger.length,
+      audit: audit.length,
+    },
     audit,
   }),
   { mode: 0o600 },
@@ -99,6 +120,7 @@ await writeFile(
     workspaceId: workspace,
     at: new Date().toISOString(),
     ledger,
+    count: ledger.length,
   }),
   { mode: 0o600 },
 );

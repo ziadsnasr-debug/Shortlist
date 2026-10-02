@@ -18,7 +18,7 @@ The dedicated Vercel project is prepared; the working persistent app runs locall
 
 ## Checks and tooling
 
-`npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e`. With isolated local Supabase running, `npm run test:integration` creates/cleans disposable fictional users and tests ownership, queue/deletion and actual object/database restore. Never point that harness at cloud data.
+`npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e`. With isolated local Supabase running, `npm run test:integration` creates/cleans disposable fictional users and tests ownership, queue/deletion and actual object/database restore. Never point that harness at cloud data. `npm run test:recovery` separately verifies 1,005-record pagination, abandoned reservations, fresh-target reviewer reconciliation and queued restore.
 
 `npm run parser:build` creates dependency-only bundle/hash. `npm run parser:snapshot` requires the intended authenticated Vercel project and executes isolation probes. `npm run provider:spike` requires an approved direct API key/exact model and fictional data. Actual parser isolation probes and the live OpenAI two-pass synthetic spike passed; semantic accuracy and customer acceptance remain pending.
 
@@ -31,3 +31,5 @@ The dedicated Vercel project is prepared; the working persistent app runs locall
 See docs/status.md for stage exits; docs/deployment.md for fresh accounts/environment/migrations/snapshot/cron/recovery; docs/environment.md for variable inventory; docs/architecture.md; docs/security.md (mandatory SEC01–SEC12); docs/validation.md; docs/customer-decisions.md; docs/reviewer-guide.md. Lockfile and license inventory accompany source. No provider account identifiers or secrets are embedded.
 
 Local tests do not establish hosted isolation, model accuracy, human usefulness or customer acceptance. These external gates remain required before real CVs.
+
+Backend priorities and remaining exit gates: docs/backend-plan.md. Static private configuration preflight is available through scripts/preflight.ts (`--check`); keys are never included in its output.

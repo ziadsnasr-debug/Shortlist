@@ -1,6 +1,49 @@
 import { it, expect } from "vitest";
 import { seed, samples } from "../fixtures/synthetic/seed";
-import { recordId, reapplyDeletions } from "../lib/recovery";
+import {
+  recordId,
+  reapplyDeletions,
+  reconcileRestoreAttribution,
+} from "../lib/recovery";
+
+it("fresh-target restore separates current reviewer references from immutable history", () => {
+  const state = seed(),
+    batch = state.vacancies[0].batches[0];
+  batch.applications = samples(batch.rubric, batch.rubricVersion);
+  const app = batch.applications[0];
+  app.reviewedBy = "source-only-user";
+  app.confirmed = true;
+  batch.snapshot = {
+    at: "fixture",
+    actor: "source-only-user",
+    reason: "reviewed",
+    tieReason: "",
+    exceptions: {},
+    selected: [],
+    rubricVersion: 1,
+    rubric: batch.rubric,
+    applications: [
+      {
+        id: app.id,
+        score: 100,
+        assessments: app.assessments,
+        blocks: app.blocks,
+        documentVersion: 1,
+        runId: app.runId,
+        reviewedBy: "source-only-user",
+      },
+    ],
+  };
+  const result = reconcileRestoreAttribution(state);
+  expect(
+    result.vacancies[0].batches[0].applications[0].reviewedBy,
+  ).toBeUndefined();
+  expect(result.vacancies[0].batches[0].applications[0].confirmed).toBe(true);
+  expect(app.reviewedBy).toBe("source-only-user");
+  expect(
+    result.vacancies[0].batches[0].snapshot?.applications[0].reviewedBy,
+  ).toBe("source-only-user");
+});
 it("reapplies current deletions to old state and snapshot without resurrecting CV content", () => {
   const s = seed(),
     b = s.vacancies[0].batches[0];
