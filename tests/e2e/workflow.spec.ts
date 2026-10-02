@@ -69,9 +69,22 @@ test("complete synthetic batch, tie gate, immutable export", async ({
         "I reviewed this CV, its criteria and the source evidence. These decisions are mine.",
       )
       .check();
+    const reviewSave = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/workspace" &&
+        response.request().method() === "POST",
+    );
     await page
       .getByRole("button", { name: "Confirm and next", exact: true })
       .click();
+    const savedResponse = await reviewSave;
+    expect(savedResponse.status()).toBe(200);
+    const savedState = await (
+      await page.request.get("/api/workspace")
+    ).json();
+    expect(savedState.vacancies[0].batches[0].applications[i].confirmed).toBe(
+      true,
+    );
   }
   await expect(
     page.getByRole("heading", { name: "Choose your shortlist", exact: true }),

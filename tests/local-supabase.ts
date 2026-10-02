@@ -65,7 +65,7 @@ async function cleanupWorkspace(workspaceId: string) {
       "-d",
       "postgres",
       "-c",
-      `delete from pgmq.q_shortlist_documents where message->>'document_id' in (select id::text from public.documents where workspace_id='${workspaceId}'); delete from public.application_reviews where application_id in (select a.id from public.applications a join public.batches b on b.id=a.batch_id join public.vacancies v on v.id=b.vacancy_id where v.workspace_id='${workspaceId}'); delete from public.assessment_runs where application_id in (select a.id from public.applications a join public.batches b on b.id=a.batch_id join public.vacancies v on v.id=b.vacancy_id where v.workspace_id='${workspaceId}'); delete from public.source_blocks where document_id in (select id from public.documents where workspace_id='${workspaceId}'); delete from public.documents where workspace_id='${workspaceId}'; delete from public.applications where batch_id in (select b.id from public.batches b join public.vacancies v on v.id=b.vacancy_id where v.workspace_id='${workspaceId}'); delete from public.batches where vacancy_id in (select id from public.vacancies where workspace_id='${workspaceId}'); delete from public.vacancies where workspace_id='${workspaceId}'; delete from public.processing_allowances where workspace_id='${workspaceId}'; delete from public.deletion_ledger where workspace_id='${workspaceId}'; delete from public.audit_events where workspace_id='${workspaceId}';`,
+      `delete from pgmq.q_shortlist_documents where message->>'document_id' in (select id::text from public.documents where workspace_id='${workspaceId}'); delete from public.application_reviews where application_id in (select a.id from public.applications a join public.batches b on b.id=a.batch_id join public.vacancies v on v.id=b.vacancy_id where v.workspace_id='${workspaceId}'); delete from public.assessment_runs where application_id in (select a.id from public.applications a join public.batches b on b.id=a.batch_id join public.vacancies v on v.id=b.vacancy_id where v.workspace_id='${workspaceId}'); delete from public.source_blocks where document_id in (select id from public.documents where workspace_id='${workspaceId}'); delete from public.retention_holds where workspace_id='${workspaceId}'; delete from public.retention_policies where workspace_id='${workspaceId}'; delete from public.documents where workspace_id='${workspaceId}'; delete from public.applications where batch_id in (select b.id from public.batches b join public.vacancies v on v.id=b.vacancy_id where v.workspace_id='${workspaceId}'); delete from public.batches where vacancy_id in (select id from public.vacancies where workspace_id='${workspaceId}'); delete from public.vacancies where workspace_id='${workspaceId}'; delete from public.processing_allowances where workspace_id='${workspaceId}'; delete from public.deletion_ledger where workspace_id='${workspaceId}'; delete from public.audit_events where workspace_id='${workspaceId}';`,
     ],
     { stdio: "ignore" },
   );
@@ -534,6 +534,70 @@ try {
       " " +
       reserved.error?.message,
   );
+  assert(
+    (await reviewer.client.from("retention_holds").select("id")).error,
+    "Direct retention hold reads must fail.",
+  );
+  assert(
+    (
+      await reviewer.client.rpc("place_retention_hold", {
+        p_workspace: workspaceId,
+        p_actor: reviewer.id,
+        p_scope: "application",
+        p_application: appKey,
+        p_reason_code: "legal",
+      })
+    ).error,
+    "Reviewer cannot invoke privileged retention hold RPC.",
+  );
+  const policy = await db.rpc("draft_retention_policy", {
+    p_workspace: workspaceId,
+    p_actor: admin.id,
+    p_days: null,
+    p_start_event: "batch_finalised_at",
+  });
+  assert(!policy.error && policy.data.automation_enabled === false, "Retention draft must remain disabled.");
+  const placed = await db.rpc("place_retention_hold", {
+    p_workspace: workspaceId,
+    p_actor: admin.id,
+    p_scope: "application",
+    p_application: appKey,
+    p_reason_code: "legal",
+  });
+  assert(!placed.error && placed.data.id, "Administrator hold failed.");
+  assert(
+    (await db.rpc("delete_application_content", { p_workspace: workspaceId, p_actor: admin.id, p_application: appKey })).error,
+    "Active hold must deny deletion without changing content.",
+  );
+  assert(
+    !(await db.rpc("release_retention_hold", { p_workspace: workspaceId, p_actor: admin.id, p_hold: placed.data.id })).error,
+    "Administrator hold release failed.",
+  );
+  async function reserveDisposableApplication(application: string) {
+    const version = (await db.from("synthetic_workspaces").select("version").eq("workspace_id", workspaceId).single()).data!.version;
+    const result = await db.rpc("reserve_document", {
+      ...reserveArgs,
+      p_expected: version,
+      p_document: randomUUID(),
+      p_application: application,
+    });
+    assert(!result.error && result.data, "Disposable retention application reserve failed.");
+  }
+  const deletionFirst = "CV-retention-delete-" + randomUUID();
+  await reserveDisposableApplication(deletionFirst);
+  assert(!(await db.rpc("delete_application_content", { p_workspace: workspaceId, p_actor: admin.id, p_application: deletionFirst })).error);
+  assert((await db.rpc("place_retention_hold", { p_workspace: workspaceId, p_actor: admin.id, p_scope: "application", p_application: deletionFirst, p_reason_code: "legal" })).error, "Deletion ledger must win over a later hold.");
+  const raced = "CV-retention-race-" + randomUUID();
+  await reserveDisposableApplication(raced);
+  const [raceDelete, raceHold] = await Promise.all([
+    db.rpc("delete_application_content", { p_workspace: workspaceId, p_actor: admin.id, p_application: raced }),
+    db.rpc("place_retention_hold", { p_workspace: workspaceId, p_actor: admin.id, p_scope: "application", p_application: raced, p_reason_code: "investigation" }),
+  ]);
+  assert(Boolean(raceDelete.error) !== Boolean(raceHold.error), "Concurrent hold/delete must have one locked winner.");
+  if (!raceHold.error) {
+    await db.rpc("release_retention_hold", { p_workspace: workspaceId, p_actor: admin.id, p_hold: raceHold.data.id });
+    assert(!(await db.rpc("delete_application_content", { p_workspace: workspaceId, p_actor: admin.id, p_application: raced })).error);
+  }
   assert(
     (
       await db.rpc("reserve_document", {
@@ -1006,6 +1070,24 @@ try {
       .length === 2,
     "Backup includes database and both originals.",
   );
+  const newerHold = await db.rpc("place_retention_hold", {
+    p_workspace: workspaceId,
+    p_actor: admin.id,
+    p_scope: "application",
+    p_application: secondApp,
+    p_reason_code: "investigation",
+  });
+  assert(!newerHold.error, "A newer hold after backup must be recorded for restore.");
+  const absentHeldApplication = "CV-retention-after-backup-" + randomUUID();
+  await reserveDisposableApplication(absentHeldApplication);
+  const absentHold = await db.rpc("place_retention_hold", {
+    p_workspace: workspaceId,
+    p_actor: admin.id,
+    p_scope: "application",
+    p_application: absentHeldApplication,
+    p_reason_code: "legal",
+  });
+  assert(!absentHold.error, "A post-backup application hold must be exportable.");
   const backup = structuredClone(
     (
       await db
@@ -1118,6 +1200,12 @@ try {
   const currentLedger = (
     await db.from("deletion_ledger").select("*").eq("workspace_id", workspaceId)
   ).data!;
+  const [currentPolicies, currentHolds, lifecycle] = await Promise.all([
+    db.from("retention_policies").select("*").eq("workspace_id", workspaceId),
+    db.from("retention_holds").select("*").eq("workspace_id", workspaceId),
+    db.from("synthetic_workspaces").select("version").eq("workspace_id", workspaceId).single(),
+  ]);
+  assert(!currentPolicies.error && !currentHolds.error && !lifecycle.error);
   await writeFile(
     backupDir + "/current-deletions.json",
     JSON.stringify({
@@ -1125,6 +1213,11 @@ try {
       at: new Date().toISOString(),
       count: currentLedger.length,
       ledger: currentLedger,
+      policyCount: currentPolicies.data!.length,
+      policies: currentPolicies.data,
+      holdCount: currentHolds.data!.length,
+      holds: currentHolds.data,
+      lifecycleRevision: lifecycle.data!.version,
     }),
     { mode: 0o600 },
   );
@@ -1136,6 +1229,29 @@ try {
     ).error,
   );
   await cleanupWorkspace(workspaceId);
+  const currentLifecycle = JSON.parse(
+    await readFile(backupDir + "/current-deletions.json", "utf8"),
+  );
+  await writeFile(
+    backupDir + "/incomplete-lifecycle.json",
+    JSON.stringify({ ...currentLifecycle, holds: [], holdCount: 1 }),
+    { mode: 0o600 },
+  );
+  assert.throws(
+    () => execFileSync("node", ["--import", "tsx", "scripts/restore.ts", backupDir, backupDir + "/incomplete-lifecycle.json"], { env: { ...childEnv, RESTORE_SYNTHETIC_CONFIRM: "EMPTY TARGET" }, stdio: "pipe" }),
+    /Backup\/ledger mismatch/,
+    "Incomplete current retention manifest must be rejected before restore.",
+  );
+  await writeFile(
+    backupDir + "/stale-lifecycle.json",
+    JSON.stringify({ ...currentLifecycle, lifecycleRevision: 0 }),
+    { mode: 0o600 },
+  );
+  assert.throws(
+    () => execFileSync("node", ["--import", "tsx", "scripts/restore.ts", backupDir, backupDir + "/stale-lifecycle.json"], { env: { ...childEnv, RESTORE_SYNTHETIC_CONFIRM: "EMPTY TARGET" }, stdio: "pipe" }),
+    /Backup\/ledger mismatch/,
+    "Stale lifecycle revision must be rejected before restore.",
+  );
   execFileSync(
     "node",
     [
@@ -1196,6 +1312,32 @@ try {
         .single()
     ).data!.settings.paused === true,
     "Restore stays paused.",
+  );
+  assert(
+    (await db.rpc("delete_application_content", { p_workspace: workspaceId, p_actor: admin.id, p_application: secondApp })).error,
+    "A newer active hold must survive restore and block deletion.",
+  );
+  const restoredAbsentHold = await db
+    .from("retention_holds")
+    .select("application_id,application_key,released_at")
+    .eq("id", absentHold.data.id)
+    .single();
+  assert(
+    !restoredAbsentHold.error && restoredAbsentHold.data.application_id === null && restoredAbsentHold.data.application_key === absentHeldApplication && restoredAbsentHold.data.released_at === null,
+    "Post-backup absent application hold must remain active by durable logical key.",
+  );
+  const absentDeletion = await db.rpc("delete_application_content", {
+    p_workspace: workspaceId,
+    p_actor: admin.id,
+    p_application: absentHeldApplication,
+  });
+  assert(
+    absentDeletion.error?.message === "retention hold active",
+    "Durable absent-application hold must block deletion before unavailable-content handling.",
+  );
+  assert(
+    !(await db.rpc("release_retention_hold", { p_workspace: workspaceId, p_actor: admin.id, p_hold: newerHold.data.id })).error,
+    "Restored active hold must be releasable by current administrator.",
   );
   assert(
     !(

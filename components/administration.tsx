@@ -1,4 +1,5 @@
 "use client";
+import { RetentionControls } from "./retention-controls";
 import { Database, SlidersHorizontal, Users, Workflow } from "lucide-react";
 import { ControlsTab } from "./admin/controls";
 import { DataTab } from "./admin/data";
@@ -79,6 +80,7 @@ export function Administration() {
               />
             </TabsContent>
             <TabsContent value="data" forceMount className={panel}>
+              <RetentionControls />
               <DataTab
                 pending={data.deletions.filter((d) => !d.completed_at).length}
                 earliest={

@@ -23,6 +23,8 @@ const documents = await pagedRows<RecoveryDocument>(db, "documents", {
 const ledger = await pagedRows(db, "deletion_ledger", {
   workspace_id: workspace,
 });
+const policies = await pagedRows(db, "retention_policies", { workspace_id: workspace });
+const holds = await pagedRows(db, "retention_holds", { workspace_id: workspace });
 if (se) throw new Error("Backup query failed.");
 const audit = await pagedRows(db, "audit_events", { workspace_id: workspace });
 const runs = [],
@@ -101,6 +103,8 @@ await writeFile(
     reviews,
     objects,
     ledger,
+    policies,
+    holds,
     counts: {
       documents: documents.length,
       runs: runs.length,
@@ -108,6 +112,8 @@ await writeFile(
       reviews: reviews.length,
       objects: objects.length,
       ledger: ledger.length,
+      policies: policies.length,
+      holds: holds.length,
       audit: audit.length,
     },
     audit,
@@ -120,7 +126,12 @@ await writeFile(
     workspaceId: workspace,
     at: new Date().toISOString(),
     ledger,
+    policies,
+    holds,
+    lifecycleRevision: state.version,
     count: ledger.length,
+    policyCount: policies.length,
+    holdCount: holds.length,
   }),
   { mode: 0o600 },
 );

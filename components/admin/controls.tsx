@@ -31,7 +31,7 @@ export function ControlsTab({
             {
               type: "settings",
               paused,
-              retentionDays: f.get("days") ? Number(f.get("days")) : null,
+              retentionDays: settings.retentionDays,
               incidentOwner: String(f.get("owner")),
             },
             "Controls saved.",
@@ -55,22 +55,10 @@ export function ControlsTab({
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-1.5">
-          <Label htmlFor="retention">Customer-approved retention days</Label>
-          <Input
-            id="retention"
-            name="days"
-            type="number"
-            min={1}
-            max={3650}
-            aria-describedby="retention-help"
-            defaultValue={settings.retentionDays ?? ""}
-          />
-          <p id="retention-help" className="text-sm">
-            Between 1 and 3650 days. Leave empty until the customer approves a
-            retention period.
-          </p>
-        </div>
+        <p className="text-sm">
+          Retention drafts and deletion holds are in the Data tab. Automatic
+          deletion is disabled.
+        </p>
         <div className="grid grid-cols-[minmax(0,1fr)] gap-1.5">
           <Label htmlFor="incident-owner">Incident owner role</Label>
           <Input

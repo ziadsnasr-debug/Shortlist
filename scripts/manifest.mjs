@@ -23,7 +23,7 @@ const manifest = {
     ? JSON.parse(readFileSync("work/parser/manifest.json", "utf8"))
     : null,
   activation:
-    "Local synthetic implementation; managed parser and live provider probes passed; hosted app and human acceptance pending",
+    "Synthetic implementation; local and authenticated hosted managed-parser/OpenAI workflow passed; independent evaluation and customer real-data acceptance pending",
   parserSnapshot: "Configured privately per deployment; actual London synthetic probes passed",
   providerModel: "gpt-6-luna (live synthetic two-pass spike verified)",
 };

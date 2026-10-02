@@ -134,9 +134,11 @@ test("controls, processing and data tabs render and pass Axe in both themes", as
   await expect(
     page.getByRole("switch", { name: "Pause intake and inference" }),
   ).toBeChecked();
-  await expect(page.getByLabel("Customer-approved retention days")).toHaveValue(
-    "90",
-  );
+  await expect(
+    page.getByText("Retention drafts and deletion holds are in the Data tab.", {
+      exact: false,
+    }),
+  ).toBeVisible();
   await expect(page.getByLabel("Incident owner role")).toHaveValue(
     "Operations lead",
   );
