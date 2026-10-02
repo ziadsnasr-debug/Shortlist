@@ -11,6 +11,8 @@ import {
   type OperationDocument,
 } from "./operation-status";
 export function administrator(access: Owner) {
+  if (access.temporaryPublic)
+    throw new WorkflowError("Account administration is unavailable during temporary public access.", 403);
   if (access.local)
     throw new WorkflowError("Administration requires Supabase staging.", 503);
   if (access.role !== "administrator")

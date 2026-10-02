@@ -94,7 +94,10 @@ await writeFile(
     }),
   ),
 );
-const bypass = false;
+const publicPilot = process.env.HOSTED_EXPECT_TEMPORARY_PUBLIC === "true";
+if (publicPilot && (process.env.TEMP_PUBLIC_ACCESS !== "true" ||
+    Date.parse(process.env.TEMP_PUBLIC_ACCESS_UNTIL ?? "") <= Date.now()))
+  throw new Error("Active temporary public pilot configuration required.");
 try {
   const created = await db.auth.admin.createUser({
     email: owner.email,
@@ -147,14 +150,7 @@ try {
     origin + "/api/readiness",
   );
   expect([401, 403]).toContain(anonymousReadiness.status());
-  if (bypass) {
-    expect(
-      (
-        await context.request.get(origin + "/api/workspace", {
-          headers: { host: "attacker.example:3218" },
-        })
-      ).status(),
-    ).toBe(403);
+  if (publicPilot) {
     await page.goto(origin + "/login");
     await expect(page).toHaveURL(origin + "/");
   } else {
@@ -182,13 +178,20 @@ try {
     page.getByRole("heading", { name: "Vacancies", level: 1 }),
   ).toBeVisible({ timeout: 30000 });
   const privateReadiness = await context.request.get(origin + "/api/readiness");
-  expect(privateReadiness.status()).toBe(200);
-  expect(privateReadiness.headers()["cache-control"]).toBe("private, no-store");
-  const readiness = await privateReadiness.json();
-  expect(Object.keys(readiness).sort()).toEqual(["checks", "status"]);
-  expect(readiness.status).toBe("configuration_ready");
-  for (const check of readiness.checks)
-    expect(Object.keys(check).sort()).toEqual(["name", "status"]);
+  if (publicPilot) {
+    expect(privateReadiness.status()).toBe(403);
+    for (const path of ["/api/administration", "/api/retention"])
+      expect((await context.request.get(origin + path)).status()).toBe(403);
+    console.log("Temporary fictional public pilot: administration denied; browser MFA not assessed.");
+  } else {
+    expect(privateReadiness.status()).toBe(200);
+    expect(privateReadiness.headers()["cache-control"]).toBe("private, no-store");
+    const readiness = await privateReadiness.json();
+    expect(Object.keys(readiness).sort()).toEqual(["checks", "status"]);
+    expect(readiness.status).toBe("configuration_ready");
+    for (const check of readiness.checks)
+      expect(Object.keys(check).sort()).toEqual(["name", "status"]);
+  }
   async function state() {
     const r = await page.request.get(origin + "/api/workspace");
     expect(r.status()).toBe(200);

@@ -14,7 +14,9 @@ import { rateLimit } from "./rate-limit";
 import { configuration } from "./config";
 import { databaseClient, sessionClient } from "./supabase";
 import { localBypassActor } from "./local-access";
+import { temporaryPublicActor } from "./temporary-access";
 export type Owner = {
+  temporaryPublic?: boolean;
   actor: string;
   workspaceId: string;
   role: "administrator" | "reviewer";
@@ -42,7 +44,8 @@ export async function owner(): Promise<Owner> {
       local: true,
     };
   }
-  let actor = localBypassActor();
+  const publicActor = temporaryPublicActor();
+  let actor = publicActor ?? localBypassActor();
   if (!actor) {
     const client = await sessionClient();
     const {
@@ -69,7 +72,7 @@ export async function owner(): Promise<Owner> {
     .single();
   if (memberError || !member)
     throw new WorkflowError("Workspace access denied.", 403);
-  return { actor, workspaceId, role: member.role, local: false };
+  return { actor, workspaceId, role: member.role, local: false, temporaryPublic: !!publicActor };
 }
 const locks = new Map<string, Promise<unknown>>();
 async function exclusive<T>(key: string, fn: () => Promise<T>): Promise<T> {

@@ -1,6 +1,7 @@
 "use client";
 import {
   BriefcaseBusiness,
+  Search,
   ChevronsUpDown,
   CircleHelp,
   LogOut,
@@ -15,6 +16,7 @@ import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Logo } from "@/components/brand/logo";
+import { Kbd } from "@/components/ui/kbd";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +47,7 @@ type SidebarProps = {
   canSignOut: boolean;
   navigate: Navigate;
   onHelp: () => void;
+  onJump: () => void;
 };
 
 function ProgressRing({ value }: { value: number }) {
@@ -70,6 +73,7 @@ function SidebarNav({
   isAdmin,
   navigate,
   onNavigate,
+  onJump,
 }: SidebarProps & { onNavigate?: () => void }) {
   const go: Navigate = (to, opts) => {
     const moved = navigate(to, opts);
@@ -78,6 +82,18 @@ function SidebarNav({
   };
   return (
     <>
+      <button
+        type="button"
+        className="jump-button"
+        onClick={() => {
+          onNavigate?.();
+          onJump();
+        }}
+      >
+        <Search aria-hidden="true" />
+        Jump to
+        <Kbd className="ml-auto">⌘K</Kbd>
+      </button>
       <nav aria-label="Main navigation" className="side-nav">
         <NavLink
           href={pathFor({ view: "home" })}

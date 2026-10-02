@@ -22,6 +22,7 @@ export type State = Omit<Workspace, "vacancies"> & {
   vacancies: PublicVacancy[];
   role: string;
   mode: string;
+  temporaryPublic?: boolean;
   capabilities?: { uploads: boolean; ai: boolean };
 };
 export type Send = (action: Action, version?: number) => Promise<State | null>;

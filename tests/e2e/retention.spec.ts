@@ -71,11 +71,12 @@ test("retention drafts never enable deletion; holds are explicit and refresh saf
     await route.fulfill({ json: state });
   });
   await page.goto("/admin");
+  await page.getByRole("tab", { name: "Data", exact: true }).click();
   await expect(
     page.getByText("No hypothetical period configured."),
   ).toBeVisible();
   await expect(
-    page.getByText("Automatic deletion is disabled.", { exact: false }),
+    page.getByRole("tabpanel").getByText("Automatic deletion is disabled.", { exact: false }),
   ).toBeVisible();
   await page.getByLabel("Hypothetical retention days").fill("90");
   await page.getByRole("button", { name: "Save preview draft" }).click();

@@ -34,3 +34,16 @@ successful authenticated document processing; record that acceptance separately.
 ## Synthetic acceptance
 
 Phase 1 verified browser MFA with a controlled disposable test account, fictional PDF/DOCX uploads, managed parsing, two OpenAI passes, human review, hidden ranking, finalisation/export/reload and narrow-screen/accessibility checks. `tests/hosted-acceptance.ts` requires explicit fictional-only confirmation, a private environment file and enabled OpenAI configuration. Cleanup verifies membership removal and soft-deletes the test account while preserving historical audit; deletion tombstones respect signed-upload expiry. This is synthetic acceptance, not real-data permission, hosted disaster recovery or independent model-quality evaluation.
+
+## Temporary public pilot
+
+At the owner's request, `TEMP_PUBLIC_ACCESS=true` skips login for the shared
+fictional-data workspace until `TEMP_PUBLIC_ACCESS_UNTIL` (an ISO timestamp).
+`TEMP_PUBLIC_ACTOR_ID` identifies a dedicated fictional pilot actor, distinct
+from the owner's account. Active workspace membership is still checked.
+The switch requires `PERSISTENCE_MODE=supabase-synthetic` and explicitly
+`REAL_CV_DATA_ENABLED=false`. Expiry restores normal sign-in and MFA.
+
+Public visitors can use the fictional workflow and its existing processing
+allowance. Account administration, invitations and membership changes are
+blocked for this access mode. Set the flag to false and redeploy to end it early.

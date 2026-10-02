@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { type Category, individualCheck, labels } from "@/lib/workflow";
+import { type Category, individualCheck, labels } from "@/lib/rules";
 import { Notice } from "./common";
 import type { PublicApp, PublicBatch, PublicVacancy, Send } from "./types";
 
