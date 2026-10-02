@@ -38,6 +38,10 @@ if (
   !Number.isFinite(Date.parse(latest.at)) ||
   !Number.isFinite(Date.parse(backup.at)) ||
   latest.count !== latest.ledger?.length ||
+  latest.policyCount !== latest.policies?.length ||
+  latest.holdCount !== latest.holds?.length ||
+  !Number.isSafeInteger(latest.lifecycleRevision) ||
+  latest.lifecycleRevision < backup.state?.version ||
   Date.parse(latest.at) < Date.parse(backup.at)
 )
   throw new Error("Backup/ledger mismatch.");
@@ -50,6 +54,8 @@ for (const table of [
   "reviews",
   "objects",
   "ledger",
+  "policies",
+  "holds",
   "audit",
 ]) {
   if (
@@ -64,6 +70,10 @@ if (
   )
 )
   throw new Error("Deletion ledger ownership mismatch.");
+if (
+  latest.policies.some((row: { workspace_id: string }) => row.workspace_id !== backup.workspaceId) ||
+  latest.holds.some((row: { workspace_id: string }) => row.workspace_id !== backup.workspaceId)
+) throw new Error("Retention lifecycle ownership mismatch.");
 const db = createClient(url, key, { auth: { persistSession: false } }),
   workspace = backup.workspaceId;
 const { data: existing, error: ee } = await db
@@ -156,6 +166,48 @@ try {
     .from("synthetic_workspaces")
     .insert({ workspace_id: workspace, version: payload.version, payload });
   if (r.error) throw new Error("State restore failed.");
+  if (latest.policies.length) {
+    r = await db.from("retention_policies").insert(
+      latest.policies.map((row: Record<string, unknown>) => ({
+        ...row,
+        created_by: null,
+        automation_enabled: false,
+      })),
+    );
+    if (r.error) throw new Error("Retention policy restore failed.");
+  }
+  if (latest.holds.length) {
+    const { data: restoredApplications, error: applicationError } = await db
+      .from("applications")
+      .select("id");
+    if (applicationError) throw new Error("Retention application reconciliation failed.");
+    const restoredApplicationIds = new Set((restoredApplications ?? []).map((item) => item.id));
+    r = await db.from("retention_holds").insert(
+      latest.holds.map((row: Record<string, unknown>) => ({
+        ...row,
+        application_id:
+          typeof row.application_id === "string" && restoredApplicationIds.has(row.application_id)
+            ? row.application_id
+            : null,
+        created_by: null,
+        released_by: null,
+      })),
+    );
+    if (r.error) throw new Error("Retention hold restore failed.");
+  }
+  if (latest.policies.length || latest.holds.length) {
+    const { error } = await db.from("audit_events").insert({
+      workspace_id: workspace,
+      actor: null,
+      operation: "restore_retention_lifecycle",
+      entity_id: workspace,
+      safe_metadata: {
+        policyVersions: latest.policies.map((row: { version: number; created_by?: string | null }) => ({ version: row.version, sourceActorId: row.created_by ?? null })),
+        holds: latest.holds.map((row: { id: string; created_by?: string | null; released_by?: string | null; released_at?: string | null }) => ({ id: row.id, sourceActorId: row.created_by ?? null, sourceReleaseActorId: row.released_by ?? null, releasedAt: row.released_at ?? null })),
+      },
+    });
+    if (error) throw new Error("Retention audit restore failed.");
+  }
   const documents = backup.documents.filter(
     (d: { application_id: string }) => !entities.has(d.application_id),
   );

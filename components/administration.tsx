@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { RetentionControls } from "./retention-controls";
 import { formatAge } from "@/lib/operation-status";
 const stageLabels: { [stage: string]: string } = {
   awaiting_upload: "Awaiting upload",
@@ -100,7 +101,7 @@ export function Administration() {
               void send({
                 type: "settings",
                 paused: f.get("paused") === "on",
-                retentionDays: f.get("days") ? Number(f.get("days")) : null,
+                retentionDays: data.settings.retentionDays,
                 incidentOwner: String(f.get("owner")),
               });
             }}
@@ -113,15 +114,6 @@ export function Administration() {
               />
               Pause intake and inference
             </label>
-            <label htmlFor="retention">Customer-approved retention days</label>
-            <Input
-              id="retention"
-              name="days"
-              type="number"
-              min={1}
-              max={3650}
-              defaultValue={data.settings.retentionDays ?? ""}
-            />
             <label htmlFor="incident-owner">Incident owner role</label>
             <Input
               id="incident-owner"
@@ -131,6 +123,7 @@ export function Administration() {
             />
             <Button disabled={busy}>Save controls</Button>
           </form>
+          <RetentionControls />
           <h2 className="mt-6">Invite a reviewer</h2>
           <form
             className="grid gap-3"
@@ -214,11 +207,10 @@ export function Administration() {
             <div className="intake-row" key={d.id}>
               <span>
                 {d.application_key} ·{" "}
-                {stageLabels[d.stage] ?? "Status unavailable"} ·{" "}
-                {d.attempts} attempts ·{" "}
-                reservation age {formatAge(d.reservation_age_seconds)}
-                {d.safe_error_message &&
-                  " · " + d.safe_error_message}
+                {stageLabels[d.stage] ?? "Status unavailable"} · {d.attempts}{" "}
+                attempts · reservation age{" "}
+                {formatAge(d.reservation_age_seconds)}
+                {d.safe_error_message && " · " + d.safe_error_message}
               </span>
             </div>
           ))}

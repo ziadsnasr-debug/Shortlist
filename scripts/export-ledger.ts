@@ -16,9 +16,24 @@ if (
     "Provide synthetic workspace configuration and protected output path.",
   );
 const db = createClient(url, key, { auth: { persistSession: false } });
+const { data: before, error: beforeError } = await db
+  .from("synthetic_workspaces")
+  .select("version")
+  .eq("workspace_id", workspaceId)
+  .single();
+if (beforeError || !before) throw new Error("Lifecycle state unavailable.");
 const ledger = await pagedRows(db, "deletion_ledger", {
   workspace_id: workspaceId,
 });
+const policies = await pagedRows(db, "retention_policies", { workspace_id: workspaceId });
+const holds = await pagedRows(db, "retention_holds", { workspace_id: workspaceId });
+const { data: state, error: stateError } = await db
+  .from("synthetic_workspaces")
+  .select("version")
+  .eq("workspace_id", workspaceId)
+  .single();
+if (stateError || !state || state.version !== before.version)
+  throw new Error("Lifecycle changed during export; retry the controlled export.");
 await writeFile(
   path,
   JSON.stringify({
@@ -26,9 +41,14 @@ await writeFile(
     at: new Date().toISOString(),
     ledger,
     count: ledger.length,
+    policies,
+    holds,
+    policyCount: policies.length,
+    holdCount: holds.length,
+    lifecycleRevision: before.version,
   }),
   { mode: 0o600 },
 );
 console.log(
-  "Current deletion ledger exported; retain separately from old backups.",
+  "Current deletion ledger and retention lifecycle exported; retain separately from old backups.",
 );
