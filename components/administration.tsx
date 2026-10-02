@@ -56,7 +56,9 @@ export function Administration() {
   }
   return (
     <section className="panel">
-      <h1>Administration</h1>
+      <h1 id="page-title" tabIndex={-1}>
+        Administration
+      </h1>
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
       {data && (

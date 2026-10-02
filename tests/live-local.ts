@@ -73,12 +73,9 @@ try {
       .fill(totp(owner.secret));
     await page.getByRole("button", { name: "Verify and continue" }).click();
   }
-  await page
-    .getByRole("button", { name: "Vacancies", exact: true })
-    .first()
-    .click();
+  await page.goto(origin + "/vacancies");
   await expect(
-    page.getByRole("heading", { name: "Your vacancies" }),
+    page.getByRole("heading", { name: "Vacancies", level: 1 }),
   ).toBeVisible();
   const privateReadiness = await context.request.get(origin + "/api/readiness");
   expect(privateReadiness.status()).toBe(200);
@@ -123,14 +120,11 @@ try {
   await action({ ...base, type: "rubric", rubric: sampleRubric });
   await action({ ...base, type: "publish" });
   await page.reload();
-  await page
-    .getByRole("button", { name: "Vacancies", exact: true })
-    .first()
-    .click();
+  await page.goto(origin + "/vacancies");
   await page
     .locator(".vacancy-row")
     .filter({ hasText: title })
-    .getByRole("button", { name: "Continue", exact: true })
+    .getByRole("link", { name: new RegExp(` for ${title}$`) })
     .click();
   await page
     .getByLabel("I confirm these files contain fictional data only.")
@@ -272,14 +266,11 @@ try {
   );
   expect(consoleErrors).toEqual([]);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page
-    .getByRole("button", { name: "Vacancies", exact: true })
-    .last()
-    .click();
+  await page.goto(origin + "/vacancies");
   await page
     .locator(".vacancy-row")
     .filter({ hasText: title })
-    .getByRole("button", { name: "Continue", exact: true })
+    .getByRole("link", { name: new RegExp(` for ${title}$`) })
     .click();
   const fits = await page.evaluate(
     () => document.documentElement.scrollWidth <= innerWidth,
