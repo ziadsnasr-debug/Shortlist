@@ -1,0 +1,11 @@
+# Phase 7 — Processing allowance visibility
+
+Administration privately reads the workspace’s current UTC-month processing allowance and the validated runtime cap. It shows used, limit and remaining units, an 80% near-limit notice and an exhausted notice. Missing rows legitimately start at zero; failed or invalid reads do not fabricate usage. Legacy responses display unavailable. Counts include queued uploads, admitted processing attempts, retries, failed processing and AI criteria drafts; they are not monetary spend. New allowance does not automatically retry attention files.
+
+No migration, grant, external notification, paid resource or provider change was introduced. The hosted database timezone was verified as UTC; fresh deployments must retain that period convention. Provider spend alerts and customer-approved notification destinations remain separate operational setup.
+
+Validation: 173 unit tests, 64 browser tests, typecheck, lint and production build passed. Actual local administrator response matched the workspace-scoped database usage/cap/remaining and was private/no-store. Initial browser checks caught an ambiguous heading locator and a real keyboard-scroll accessibility defect; the table wrapper is now focusable and a Tab regression checks it on the phone layout. Axe passes after the fix. Astra allowance static review had no findings; supplementary table review is recorded in release evidence.
+
+Phase 6 was merged as PR #24 (`c69410f`) after both CI jobs passed and deployed from clean source as `dpl_37h7b6dELsHXzzrcSjuzMY15MLj5`. Ready-state and effective deployment Node 22 metadata were verified; the project’s general default Node 24 is overridden by the source engines pin. Explicit temporary-public smoke passed. Complete final Phase 7 merge/deployment/live evidence is retained in the handover release receipt.
+
+CI follow-up: one runner exceeded the full six-CV test’s original 30-second budget while the parallel runner passed. The complete scenario now has 60 seconds; each review-save response has its own stricter 10-second bound. No retries, skipped assertions or application gates were introduced. Final-head CI must pass before merge.

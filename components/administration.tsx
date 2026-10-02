@@ -73,6 +73,7 @@ export function Administration() {
               <ProcessingTab
                 documents={data.documents}
                 summary={data.processing}
+                allowance={data.allowance}
                 paused={data.settings.paused}
                 busy={a.busy}
                 send={a.send}

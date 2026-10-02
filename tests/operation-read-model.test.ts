@@ -12,6 +12,7 @@ vi.mock("../lib/store", () => ({ readState: mocks.readState }));
 
 import { administration } from "../lib/administration";
 import { documentsFor } from "../lib/pipeline/documents";
+import { currentUtcAllowancePeriod } from "../lib/processing-allowance";
 
 const access = {
   local: false,
@@ -66,6 +67,10 @@ describe("operation read models", () => {
         },
         error: null,
       }),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: { period: currentUtcAllowancePeriod(), used: 7 },
+        error: null,
+      }),
     };
     mocks.databaseClient.mockReturnValue({
       from: () => workspaceQuery,
@@ -105,10 +110,31 @@ describe("operation read models", () => {
       queued_or_processing: 0,
     });
     expect(result.deletions[0].ready_after).toBe("2026-10-02T14:10:00.000Z");
+    expect(result.allowance).toMatchObject({ used: 7, limit: 240, remaining: 233 });
     expect(mocks.pagedRows.mock.calls[1][2]).toEqual({
       workspace_id: access.workspaceId,
       deletion_state: "retained",
     });
     expect(mocks.pagedRows.mock.calls[2][4]).toContain("ready_after");
+  });
+
+  it("fails administration when the allowance read fails instead of showing zero", async () => {
+    const query = {
+      select: () => query,
+      eq: vi.fn(() => query),
+      single: vi.fn().mockResolvedValue({
+        data: { settings: { paused: false, retentionDays: null, incidentOwner: "" } },
+        error: null,
+      }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: { message: "denied" } }),
+    };
+    mocks.databaseClient.mockReturnValue({ from: () => query });
+    mocks.pagedRows
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    await expect(administration(access)).rejects.toThrow("ADMIN_UNAVAILABLE");
+    expect(query.eq).toHaveBeenCalledWith("workspace_id", access.workspaceId);
   });
 });

@@ -5,6 +5,9 @@ const criteria = "/vacancies/customer-success/first-batch/criteria";
 test("complete synthetic batch, tie gate, immutable export", async ({
   page,
 }) => {
+  // Six complete reviews, multiple accessibility audits and immutable export
+  // take longer on the two-core CI runner than an individual screen test.
+  test.setTimeout(60_000);
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(criteria);
@@ -73,6 +76,7 @@ test("complete synthetic batch, tie gate, immutable export", async ({
       (response) =>
         new URL(response.url()).pathname === "/api/workspace" &&
         response.request().method() === "POST",
+      { timeout: 10_000 },
     );
     await page
       .getByRole("button", { name: "Confirm and next", exact: true })

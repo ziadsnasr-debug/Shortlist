@@ -1,4 +1,4 @@
-# Backend completion plan — 2 October 2026
+# Backend completion plan — 3 October 2026
 
 V1.2 and mandatory Appendix A remain authoritative. The implemented local synthetic app is workable; deployment, privacy and independent pilot acceptance are separate exit gates. No paid hosted backend is authorized.
 
@@ -28,12 +28,12 @@ The deployed Vercel app cannot connect to a developer’s local loopback databas
 
 Before real CV activation, implement and exercise the customer-approved retention/hold lifecycle across originals, text, outputs, exports and backups. Versioned hypothetical retention drafts and auditable holds are implemented and tested; automation is constrained off. Local restore preserves current holds and deletions. Customer-authorised scheduling, independent hosted restore and monitoring/alerts remain deployment work. An automatic purge must not be invented before the customer defines holds, scope and retention.
 
-## Feature priorities after acceptance inputs
+## Remaining priorities after implementation
 
-1. Approved retention/hold administration and an auditable scheduled lifecycle, including export/backup responsibilities.
-2. Private operational dashboard with processing attempts, reservation age, safe errors and earliest deletion completion times; alerts to an approved destination after explicit notification authorization.
-3. Built-in reusable editable role suggestions (user-saved libraries deferred) and clearer bulk-upload progress, preserving versioned published rubrics and every-application review.
-4. Reviewer-labelled evaluation runner with frozen thresholds, support audit and model/prompt/parser change gates.
-5. Optional Jev classification experiment only if independent evidence demonstrates acceptable support and ambiguity handling. Keep one approved production route; no confidence-as-score or silent fallback.
+1. Customer-approved retention scheduling. Draft policies, holds, previews and recovery preservation are implemented; automation remains off.
+2. Approved notification destination and provider spend alerts. Private processing status is implemented; allowance visibility is implemented in Phase 7. Application units are not monetary spend.
+3. Independent recruiter labels and recorded actual model observations, support/essential audits, repeats, paired attacks and timed reviews. The sealed assessor refuses incomplete evidence; it cannot supply independent judgements.
+4. Customer-owned staging/production separation, sender/onboarding delivery, another operator deployment/restore, operational ownership and acceptance. Developer-run local and hosted fictional acceptance is separate evidence.
+5. Optional user-saved role library or Jev experiment after a concrete need and independent benefit evidence. Built-in editable role presets and bulk-upload progress are implemented. No provider change is recommended from the current unassessed benchmark.
 
 No automatic hiring decisions, protected-trait inference, automated rejection, ranking before review, or unsolicited candidate messages are proposed.

@@ -1,4 +1,4 @@
-# Build status — 2 October 2026
+# Build status — 3 October 2026
 
 Implementation advanced through the remaining stages using synthetic data. Stage exit gates are not all achieved.
 
@@ -16,3 +16,5 @@ Real-data activation is refused. The local backend remains available for develop
 Repository remains `/Users/ziadnasr/dev/Projects/Shortlist`. The original CV Scanning input directory is preserved. Shared Zed vault registration is connected. Codex sidebar project registration previously could not be automated; select the repository with Add project.
 
 Backend completion priorities and phase plan: backend-plan.md. Production readiness is not claimed: hosted synthetic acceptance is demonstrated, while independent evaluation/acceptance and customer-approved retention scheduling remains outstanding. Developer-only Jev feasibility comparison is documented separately and does not change the production provider.
+
+Release hardening: PR #23 corrects explicitly selected public-pilot smoke checks and private preflight. Phase 6 fixes consumer/deletion deadline handoff and attempts cleanup after queue failures; the separate recovery harness exercised 1,005 deletion rows, empty-target restoration, immutable history and paused processing. These are developer-run synthetic tests, not another operator’s acceptance. Release inventory is generated separately and no longer commits a historical source SHA as current.

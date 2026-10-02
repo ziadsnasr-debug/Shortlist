@@ -24,6 +24,7 @@ import {
   shortId,
   type AdminDocument,
   type Busy,
+  type ProcessingAllowance,
   type ProcessingSummary,
   type SendAction,
 } from "./types";
@@ -86,6 +87,7 @@ function describe(d: AdminDocument): {
 export function ProcessingTab({
   documents,
   summary,
+  allowance,
   paused,
   busy,
   send,
@@ -93,6 +95,7 @@ export function ProcessingTab({
 }: {
   documents: AdminDocument[];
   summary?: ProcessingSummary;
+  allowance?: ProcessingAllowance;
   paused: boolean;
   busy: Busy;
   send: SendAction;
@@ -155,6 +158,59 @@ export function ProcessingTab({
             ))}
           </dl>
         )}
+        <section
+          aria-labelledby="allowance-heading"
+          className="grid gap-3 rounded-lg border border-border bg-card p-4"
+        >
+          <div className="grid gap-1">
+            <h3 id="allowance-heading" className="text-base font-medium">
+              Monthly processing allowance
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Includes queued uploads, AI criteria drafts, processing attempts and retries, even
+              when processing fails. This is not a completed-CV count or spend.
+              The period is based on UTC.
+            </p>
+          </div>
+          {allowance ? (
+            <>
+              <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                {(
+                  [
+                    ["Period", allowance.period],
+                    ["Used", allowance.used],
+                    ["Limit", allowance.limit],
+                    ["Remaining", allowance.remaining],
+                  ] as const
+                ).map(([term, value]) => (
+                  <div key={term} className="grid gap-0.5">
+                    <dt className="text-xs text-muted-foreground">{term}</dt>
+                    <dd className="font-mono tabular-nums text-foreground">
+                      {value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+              {allowance.state === "near_limit" && (
+                <p role="status" className="text-sm text-amber-700 dark:text-amber-300">
+                  This workspace is nearing its monthly processing allowance.
+                </p>
+              )}
+              {allowance.state === "exhausted" && (
+                <p role="status" className="text-sm text-destructive">
+                  This workspace has used its monthly processing allowance.
+                  New processing requires remaining allowance. Files needing
+                  attention may also need an explicit retry.
+                </p>
+              )}
+            </>
+          ) : (
+            <p role="status" className="text-sm text-muted-foreground">
+              Monthly allowance usage is unavailable. Refresh or contact an
+              administrator if this continues.
+            </p>
+          )}
+        </section>
         {paused && (
           <p id="process-paused" className="text-sm">
             Processing is paused. Turn off Pause intake and inference in
