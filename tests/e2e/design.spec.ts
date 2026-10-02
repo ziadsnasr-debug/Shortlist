@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { publishCriteria } from "./criteria-helpers";
 const criteria = "/vacancies/customer-success/first-batch/criteria";
 
 test("weight chart follows edits and stays readable at narrow sizes", async ({
@@ -10,13 +11,19 @@ test("weight chart follows edits and stays readable at narrow sizes", async ({
     page.getByRole("region", { name: "Criteria weight allocation" }),
   ).toBeVisible();
   await page.getByLabel("Points", { exact: true }).first().fill("1");
-  await expect(page.getByText(/points left to allocate/)).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Criteria weight allocation" })
+      .getByText("76 of 100 points · 24 to allocate"),
+  ).toBeVisible();
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await expect(
       page.getByRole("region", { name: "Criteria weight allocation" }),
     ).toBeVisible();
-    const bounds = await page.locator(".insight-panel").boundingBox();
+    const bounds = await page
+      .getByRole("region", { name: "Criteria weight allocation" })
+      .boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
     expect(
@@ -33,9 +40,7 @@ test("source links focus actual passage; reduced motion and review gates remain 
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(criteria);
-  await page
-    .getByRole("button", { name: "Publish criteria", exact: true })
-    .click();
+  await publishCriteria(page);
   await page
     .getByRole("button", { name: "Add sample CVs", exact: true })
     .click();

@@ -1,56 +1,138 @@
 import { type CSSProperties } from "react";
-import { BarChart3, CheckCheck, Files, ShieldCheck } from "lucide-react";
+import {
+  BarChart3,
+  Check,
+  CheckCheck,
+  Files,
+  ShieldCheck,
+  TriangleAlert,
+} from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { allocationText } from "./workflow/criteria/model";
 import { type Application, type Criterion, labels } from "@/lib/workflow";
 
-export function WeightChart({ rubric }: { rubric: Criterion[] }) {
-  const sections = new Map<string, number>();
-  for (const c of rubric)
-    sections.set(
-      c.section || "Untitled section",
-      (sections.get(c.section || "Untitled section") ?? 0) +
-        (Number.isFinite(c.points) ? c.points : 0),
-    );
-  const total = [...sections.values()].reduce((sum, n) => sum + n, 0);
+/**
+ * Sticky allocation bar for the criteria step. Each criterion is a segment
+ * sized by its points. Segments move with transform (translateX + scaleX), so
+ * resizing never triggers layout. Essentials carry a diamond as well as a
+ * stronger fill, so the difference is never colour alone.
+ */
+export function WeightChart({
+  rubric,
+  instant = false,
+}: {
+  rubric: Criterion[];
+  /** Skip the transition, for keyboard-repeated edits. */
+  instant?: boolean;
+}) {
+  const items = rubric.map((c) => ({
+    ...c,
+    points: Number.isFinite(c.points) ? c.points : 0,
+  }));
+  const total = items.reduce((n, c) => n + c.points, 0);
+  const scale = Math.max(100, total);
+  const segments = items.map((c, i) => ({
+    c,
+    start: items.slice(0, i).reduce((n, x) => n + x.points, 0) / scale,
+    size: c.points / scale,
+  }));
+  const move = instant
+    ? "transition-none"
+    : "transition-transform duration-(--dur-base) ease-(--ease-out) motion-reduce:transition-none";
+  const ready = total === 100;
+  const over = total > 100;
   return (
     <section
-      className="insight-panel weight-chart"
       aria-label="Criteria weight allocation"
+      className="sticky top-0 z-10 rounded-lg border border-border bg-card px-4 py-3 max-md:top-(--mobile-bar-height,3.5rem)"
     >
-      <div className="insight-title">
-        <span className="eyebrow">
-          <BarChart3 aria-hidden="true" /> SCORING FRAMEWORK
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <p
+          role="status"
+          className="flex items-center gap-2 text-sm font-medium tabular-nums"
+        >
+          {ready ? (
+            <Check aria-hidden="true" className="size-4 text-success" />
+          ) : over ? (
+            <TriangleAlert
+              aria-hidden="true"
+              className="size-4 text-destructive"
+            />
+          ) : null}
+          {allocationText(total)}
+        </p>
+        <span aria-hidden="true" className="text-xs text-muted-foreground">
+          ◆ Essential
         </span>
-        <strong>
-          {total === 100
-            ? "Every point has a purpose."
-            : total < 100
-              ? `${100 - total} points left to allocate`
-              : `${total - 100} points over the limit`}
-        </strong>
-        <p>One consistent framework for every application.</p>
       </div>
-      <div className="weight-rows">
-        {[...sections].map(([name, value], i) => (
-          <div className="weight-row" key={name}>
-            <div>
-              <span>{name}</span>
-              <strong>
-                {value} <small>pts</small>
-              </strong>
+      <TooltipProvider delayDuration={120}>
+        <div className="relative mt-2 h-4 w-full overflow-hidden rounded-sm bg-surface-2">
+          {segments.map(({ c, start, size }) => (
+            <div
+              key={c.id}
+              aria-hidden="true"
+              className={`absolute inset-y-0 left-0 w-full origin-left ${move} ${c.essential ? "bg-primary" : "bg-ev-partial"}`}
+              style={{
+                transform: `translateX(${start * 100}%) scaleX(${size})`,
+              }}
+            />
+          ))}
+          {segments.slice(1).map(({ c, start }) => (
+            <div
+              key={`gap-${c.id}`}
+              aria-hidden="true"
+              className={`pointer-events-none absolute inset-y-0 left-0 w-full ${move}`}
+              style={{ transform: `translateX(${start * 100}%)` }}
+            >
+              <div className="absolute inset-y-0 left-0 -ml-px w-0.5 bg-card" />
             </div>
-            <div className="bar-track" aria-hidden="true">
-              <span
-                className={`bar-fill series-${i % 3}`}
-                style={
-                  {
-                    "--bar-size": Math.min(100, Math.max(0, value)) / 100,
-                  } as CSSProperties
-                }
-              />
+          ))}
+          {over ? (
+            <div
+              aria-hidden="true"
+              className={`pointer-events-none absolute inset-y-0 left-0 w-full ${move}`}
+              style={{ transform: `translateX(${(100 / scale) * 100}%)` }}
+            >
+              <div className="absolute inset-y-0 left-0 -ml-px w-0.5 bg-foreground" />
             </div>
+          ) : null}
+          <div className="absolute inset-0" aria-hidden="true">
+            {segments.map(({ c, start, size }) => (
+              <Tooltip key={c.id}>
+                <TooltipTrigger asChild>
+                  <span
+                    className="absolute inset-y-0 flex items-center justify-center text-[10px] leading-none text-primary-foreground"
+                    style={{
+                      left: `${start * 100}%`,
+                      width: `${size * 100}%`,
+                    }}
+                  >
+                    {c.essential && size >= 0.05 ? "◆" : null}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {c.essential ? "◆ " : ""}
+                  {c.title.trim() || "Untitled criterion"} · {c.points} points
+                  {c.essential ? " · Essential" : ""}
+                </TooltipContent>
+              </Tooltip>
+            ))}
           </div>
+        </div>
+      </TooltipProvider>
+      <ul className="sr-only">
+        {items.map((c) => (
+          <li key={c.id}>
+            {c.title.trim() || "Untitled criterion"}, {c.points} points
+            {c.essential ? ", essential" : ""}
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }

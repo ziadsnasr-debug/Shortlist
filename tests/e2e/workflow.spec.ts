@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect } from "@playwright/test";
+import { publishCriteria } from "./criteria-helpers";
 const criteria = "/vacancies/customer-success/first-batch/criteria";
 test("complete synthetic batch, tie gate, immutable export", async ({
   page,
@@ -13,9 +14,7 @@ test("complete synthetic batch, tie gate, immutable export", async ({
       exact: true,
     }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Publish criteria", exact: true })
-    .click();
+  await publishCriteria(page);
   await page
     .getByRole("button", { name: "Add sample CVs", exact: true })
     .click();
@@ -254,9 +253,7 @@ test("hostile criteria text stays inert through review and no original is served
   });
   expect(saved.status()).toBe(200);
   await page.reload();
-  await page
-    .getByRole("button", { name: "Publish criteria", exact: true })
-    .click();
+  await publishCriteria(page);
   await page
     .getByRole("button", { name: "Add sample CVs", exact: true })
     .click();

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ProcessingDemo } from "@/components/workflow/processing-demo";
 import {
   AlertCircle,
   CheckCircle2,
@@ -151,6 +152,9 @@ export function DesignGallery() {
           </p>
         </header>
 
+        <Section id="g-processing" title="Processing">
+          <ProcessingDemo />
+        </Section>
         <Section id="g-button" title="Button">
           <Cell
             label="Default"
