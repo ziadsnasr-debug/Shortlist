@@ -1,47 +1,145 @@
 @import "tailwindcss";
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Design tokens. Values are OKLCH-derived and contrast-checked (docs/DESIGN.md).
+   Light is the default; dark is selected by next-themes via data-theme. */
 :root {
-  --background: #f6f5f2;
-  --foreground: #20242c;
-  --primary: #3454d1;
-  --primary-foreground: #fff;
-  --secondary: #eef1ff;
-  --secondary-foreground: #20242c;
-  --muted: #eeede9;
-  --muted-foreground: #626875;
-  --border: #e1e3e8;
-  --input: #818793;
-  --ring: #3454d1;
-  --destructive: #b52f40;
+  --background: #f7fbfc;
+  --foreground: #122228;
+  --card: #fdffff;
+  --card-foreground: #122228;
+  --popover: #fdffff;
+  --popover-foreground: #122228;
+  --surface-2: #eff5f6;
+  --primary: #007463;
+  --primary-hover: #006555;
+  --primary-foreground: #fdffff;
+  --secondary: #dff6f0;
+  --secondary-foreground: #122228;
+  --accent: #eff5f6;
+  --accent-foreground: #122228;
+  --muted: #e6eef0;
+  --muted-foreground: #49585d;
+  --subtle-foreground: #636e72;
+  --border: #dce3e5;
+  --border-strong: #c4cccf;
+  --accent-border: color-mix(in oklab, var(--primary) 40%, var(--border));
+  --input: #838e92;
+  --ring: #007463;
+  --destructive: #ba3535;
+  --destructive-foreground: #fdffff;
+  --success: #2b7440;
+  --warning: #935a11;
+  --ev-full: #006e5e;
+  --ev-partial: #6bbdab;
+  --ev-none: #dadfe0;
+  --ev-unclear: #f2af48;
+  --sidebar: #051e27;
+  --sidebar-foreground: #e5edee;
+  --sidebar-muted: #9da7a9;
+  --sidebar-hover: #112a33;
+  --sidebar-active: #15353d;
+  --sidebar-border: #22363e;
+  --sidebar-accent: #54b9a5;
+  --logo-accent: var(--primary);
+  --shadow-overlay:
+    0 1px 2px rgb(5 30 39 / 0.06), 0 8px 24px rgb(5 30 39 / 0.1);
+
   --radius: 0.5rem;
-  --card: #fff;
-  --card-foreground: #20242c;
-  --popover: #fff;
-  --popover-foreground: #20242c;
-  --accent: #eef1ff;
-  --accent-foreground: #20242c;
+  --dur-press: 100ms;
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --background: #091114;
+  --foreground: #e5edee;
+  --card: #0f191d;
+  --card-foreground: #e5edee;
+  --popover: #0f191d;
+  --popover-foreground: #e5edee;
+  --surface-2: #172125;
+  --primary: #54b9a5;
+  --primary-hover: #6cc7b4;
+  --primary-foreground: #051e27;
+  --secondary: #12302b;
+  --secondary-foreground: #e5edee;
+  --accent: #172125;
+  --accent-foreground: #e5edee;
+  --muted: #1c272b;
+  --muted-foreground: #9da7a9;
+  --subtle-foreground: #7e888b;
+  --border: #253034;
+  --border-strong: #354246;
+  --input: #657175;
+  --ring: #54b9a5;
+  --destructive: #e07a6e;
+  --destructive-foreground: #091114;
+  --success: #73c385;
+  --warning: #eeb154;
+  --ev-full: #4db39e;
+  --ev-partial: #2f7063;
+  --ev-none: #2d3437;
+  --ev-unclear: #e8aa4e;
+  --sidebar: #050f13;
+  --sidebar-hover: #0d1d23;
+  --sidebar-active: #12282f;
+  --sidebar-border: #1a2a30;
+  --shadow-overlay: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.4);
+  color-scheme: dark;
 }
 @theme inline {
+  --font-sans:
+    var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  --font-mono:
+    var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-destructive: var(--destructive);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-surface-2: var(--surface-2);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 2px);
-  --radius-sm: calc(var(--radius) - 2px);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-ev-full: var(--ev-full);
+  --color-ev-partial: var(--ev-partial);
+  --color-ev-none: var(--ev-none);
+  --color-ev-unclear: var(--ev-unclear);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+@layer base {
+  /* Tailwind v4 defaults bare borders to currentColor; keep them structural. */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
 }
 * {
   box-sizing: border-box;
@@ -50,12 +148,9 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font:
-    14px/1.6 -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Arial,
-    sans-serif;
+  font: 400 14px/1.6 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01", "cv11";
 }
 button {
   cursor: pointer;
@@ -64,17 +159,18 @@ button:disabled {
   cursor: not-allowed;
 }
 :focus-visible {
-  outline: 3px solid var(--ring);
-  outline-offset: 3px;
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 h1 {
-  font-size: 32px;
-  font-weight: 650;
-  letter-spacing: -0.8px;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
 }
 h2 {
   font-size: 19px;
   font-weight: 600;
+  letter-spacing: -0.02em;
 }
 h3 {
   font-weight: 600;
@@ -88,8 +184,8 @@ p {
   min-height: 100vh;
 }
 .sidebar {
-  background: #20242c;
-  color: #e3e5ec;
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
   padding: 30px 18px;
   position: sticky;
   top: 0;
@@ -99,26 +195,22 @@ p {
   flex-direction: column;
   gap: 30px;
 }
-.brand {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -1px;
-  display: flex;
+.logo {
+  display: inline-flex;
   align-items: center;
-  gap: 9px;
-  color: white;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
 }
-.brandmark {
-  display: grid;
-  place-items: center;
-  background: #b8c6ff;
-  color: #20242c;
-  border-radius: 8px;
-  width: 32px;
-  height: 35px;
+.logo svg {
+  width: 24px;
+  height: 24px;
 }
-.brandmark svg {
-  width: 23px;
+.brand {
+  color: var(--sidebar-foreground);
+  --logo-accent: var(--sidebar-accent);
 }
 .sidebar nav {
   display: flex;
@@ -132,8 +224,8 @@ p {
   justify-content: flex-start;
 }
 .sidebar button:hover {
-  background: #353b48;
-  color: white;
+  background: var(--sidebar-hover);
+  color: var(--sidebar-foreground);
 }
 .side-roles {
   display: flex;
@@ -143,7 +235,7 @@ p {
 .side-roles small {
   font-size: 10px;
   letter-spacing: 1.4px;
-  color: #aeb5c5;
+  color: var(--sidebar-muted);
   padding: 0 12px;
 }
 .side-roles button {
@@ -154,24 +246,25 @@ p {
   border-radius: 6px;
 }
 .side-roles button.current {
-  background: #333b52;
-  border-left: 2px solid #a9bbff;
+  background: var(--sidebar-active);
+  color: var(--sidebar-foreground);
+  font-weight: 500;
 }
 .sidefoot {
   margin-top: auto;
   font-size: 12px;
-  border-top: 1px solid #414754;
+  border-top: 1px solid var(--sidebar-border);
   padding: 20px 10px 0;
 }
 .sidefoot p {
-  color: #b8bfce;
+  color: var(--sidebar-muted);
 }
 .demo-banner {
   display: flex;
   justify-content: space-between;
   gap: 16px;
   padding: 12px 36px;
-  background: #eef1ff;
+  background: var(--secondary);
   border-bottom: 1px solid var(--border);
   font-size: 12px;
 }
@@ -223,7 +316,7 @@ p {
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
-  background: white;
+  background: var(--card);
 }
 .steps button {
   display: flex;
@@ -237,7 +330,7 @@ p {
   border: 0;
 }
 .steps button.active {
-  background: #eef1ff;
+  background: var(--secondary);
   box-shadow: inset 0 -3px 0 var(--primary);
 }
 .steps strong {
@@ -263,10 +356,10 @@ p {
 .active .step-number {
   background: var(--primary);
   border-color: var(--primary);
-  color: white;
+  color: var(--primary-foreground);
 }
 .panel {
-  background: white;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
@@ -370,7 +463,7 @@ summary {
   flex-wrap: wrap;
   margin-bottom: 20px;
   padding: 15px 20px;
-  background: white;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 8px;
 }
@@ -420,10 +513,13 @@ summary {
   display: block;
   text-align: left;
   padding: 12px 14px;
-  background: #f6f5f2;
-  border-left: 3px solid #8399ed;
-  border-radius: 0 5px 5px 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   width: 100%;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 .quote small {
   display: block;
@@ -438,14 +534,14 @@ summary {
 .individual-check {
   margin-top: 16px;
   padding: 15px;
-  background: #f6f7fc;
+  background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 6px;
 }
 .source {
   position: sticky;
   top: 24px;
-  background: white;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
@@ -468,7 +564,7 @@ summary {
 }
 .source-block {
   padding: 15px 8px;
-  border-bottom: 1px solid #eeeff3;
+  border-bottom: 1px solid var(--border);
 }
 .source-block small {
   font-size: 10px;
@@ -481,13 +577,13 @@ summary {
   line-height: 1.8;
 }
 .source-block.highlighted {
-  background: #eef1ff;
+  background: var(--secondary);
 }
 .source-footer {
   display: flex;
   gap: 10px;
   padding: 15px 20px;
-  background: #f6f5f2;
+  background: var(--surface-2);
   font-size: 10px;
   color: var(--muted-foreground);
 }
@@ -532,7 +628,7 @@ summary {
 select {
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: white;
+  background: var(--card);
   max-width: 100%;
   padding: 9px 12px;
   font: inherit;
@@ -566,9 +662,7 @@ textarea {
   .sidebar {
     padding: 25px 15px;
   }
-  .brand {
-    font-size: 25px;
-  }
+
   .page {
     padding: 28px 25px;
   }
@@ -620,9 +714,7 @@ textarea {
   .sidebar nav svg {
     display: none;
   }
-  .brand {
-    font-size: 23px;
-  }
+
   .workspace-label,
   .side-roles,
   .sidefoot {
@@ -710,16 +802,13 @@ textarea {
 /* Keep notification text readable throughout entrance motion. */
 [data-sonner-toast][data-styled="true"][data-visible="true"] {
   opacity: 1 !important;
-  color: #20242c;
+  color: var(--popover-foreground);
 }
 [data-sonner-toast] [data-content] {
   opacity: 1 !important;
 }
 
 /* Workspace design system. Motion never gates content or interaction. */
-:root {
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-}
 .shell main {
   min-width: 0;
 }
@@ -738,8 +827,8 @@ h3,
   align-items: center;
   gap: 8px;
   font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 1.6px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   color: var(--muted-foreground);
 }
 .eyebrow svg {
@@ -752,34 +841,27 @@ h3,
   gap: 10px;
   font-size: 12px;
   padding: 14px 10px;
-  border: 1px solid #414754;
+  border: 1px solid var(--sidebar-border);
   border-radius: 10px;
 }
 .workspace-label small {
   display: block;
-  color: #b8bfce;
+  color: var(--sidebar-muted);
   font-size: 10px;
 }
 .workspace-avatar {
   width: 28px;
   height: 28px;
   border-radius: 7px;
-  background: #41495f;
+  background: var(--sidebar-active);
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  color: white;
+  color: var(--sidebar-foreground);
   font-weight: 600;
 }
 .brand {
-  font-size: 26px;
-  padding-left: 8px;
-}
-.brandmark {
-  width: 32px;
-  height: 32px;
-  background: #3454d1;
-  color: white;
+  padding: 4px 8px;
 }
 .sidebar {
   gap: 26px;
@@ -792,23 +874,23 @@ h3,
 }
 .sidefoot .eyebrow {
   padding: 0 12px 10px;
-  color: #b8bfce;
+  color: var(--sidebar-muted);
 }
 .sidefoot button {
   width: 100%;
   font-size: 12px;
 }
 .demo-banner {
-  background: #fff;
+  background: var(--card);
   padding: 15px 40px;
   font-size: 11px;
 }
 .demo-banner strong {
-  color: #3454d1;
+  color: var(--primary);
 }
 .save-status {
   white-space: nowrap;
-  color: #626875;
+  color: var(--muted-foreground);
 }
 .save-status::before {
   content: "";
@@ -828,48 +910,47 @@ h3,
 .steps button {
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--card);
   padding: 15px;
-  transition: background 150ms ease;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 .steps button:last-child {
   border: 1px solid var(--border);
 }
 .steps button.active {
-  border-color: #a7b7f2;
-  background: #eef1ff;
+  border-color: var(--accent-border);
+  background: var(--secondary);
   box-shadow: none;
 }
 .steps button.active strong {
-  color: #2d48b8;
+  color: var(--primary);
 }
 .steps .step-number {
   border-radius: 8px;
   width: 30px;
   height: 30px;
-  background: #f6f5f2;
+  background: var(--surface-2);
 }
 .steps .active .step-number {
-  background: #3454d1;
+  background: var(--primary);
 }
 .steps small {
   display: block;
   margin-top: 2px;
 }
-.panel {
-  box-shadow: 0 2px 3px #20242c03;
-}
 .panel > :last-child {
   border-bottom: 0;
 }
 .criterion-grid input {
-  background: #fff;
+  background: var(--card);
 }
 .criterion {
-  border-left: 3px solid transparent;
+  transition: background-color var(--dur-fast) var(--ease-out);
 }
 .criterion:focus-within {
-  border-left-color: var(--primary);
+  background: color-mix(in oklab, var(--primary) 4%, var(--card));
 }
 .criterion summary,
 .assessment summary {
@@ -886,21 +967,20 @@ h3,
   line-height: 1.7;
 }
 .quote {
-  border-left-color: #8399ed;
-  background: #f5f6fc;
   padding: 16px;
 }
 .quote small {
   font-size: 11px;
 }
 .quote:hover {
-  background: #eef1ff;
+  background: var(--secondary);
+  border-color: var(--accent-border);
 }
 .individual-check {
-  border-color: #d8dded;
+  border-color: var(--border);
 }
 .source-header {
-  background: #fafaf9;
+  background: var(--surface-2);
 }
 .source-header h2 {
   font-size: 17px;
@@ -913,18 +993,14 @@ h3,
   border-radius: 6px;
 }
 .source-block.highlighted {
-  box-shadow: inset 3px 0 0 #3454d1;
-  padding-left: 14px;
+  box-shadow: inset 0 0 0 1px var(--accent-border);
 }
 .source-block:focus {
   outline: 2px solid var(--ring);
   outline-offset: -2px;
 }
-.review-selector {
-  border-left: 3px solid var(--primary);
-}
 .review-footer {
-  background: #fbfbfa;
+  background: var(--surface-2);
 }
 .review-footer .actions {
   justify-content: flex-end;
@@ -935,16 +1011,16 @@ h3,
   gap: 32px;
   padding: 24px 28px;
   margin: 18px 0;
-  border: 1px solid #dce1f0;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: linear-gradient(120deg, #fff 35%, #f1f3ff);
+  background: var(--card);
 }
 .insight-title strong {
   display: block;
   font-size: 20px;
-  font-weight: 550;
+  font-weight: 600;
   margin: 12px 0 5px;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.02em;
 }
 .insight-title p {
   font-size: 12px;
@@ -977,23 +1053,23 @@ h3,
   height: 6px;
   border-radius: 4px;
   overflow: hidden;
-  background: #e3e7f4;
+  background: var(--muted);
 }
 .bar-fill,
 .score-track > span {
   display: block;
   height: 100%;
   width: 100%;
-  background: #3454d1;
+  background: var(--primary);
   transform-origin: left;
   transform: scaleX(var(--bar-size));
   animation: bar-enter 240ms var(--ease-out);
 }
 .series-1 {
-  background: #667dbd;
+  background: var(--primary);
 }
 .series-2 {
-  background: #555e76;
+  background: var(--primary);
 }
 .batch-progress {
   position: relative;
@@ -1006,7 +1082,7 @@ h3,
   margin: 18px 0;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--card);
   overflow: hidden;
 }
 .batch-progress > div:not(.progress-track) {
@@ -1019,11 +1095,11 @@ h3,
 .batch-progress svg {
   width: 15px;
   height: 15px;
-  color: #3454d1;
+  color: var(--primary);
 }
 .batch-progress strong {
   font-variant-numeric: tabular-nums;
-  color: #20242c;
+  color: var(--foreground);
 }
 .progress-track {
   position: absolute;
@@ -1031,12 +1107,12 @@ h3,
   left: 0;
   right: 0;
   height: 3px;
-  background: #e3e7f4;
+  background: var(--muted);
 }
 .progress-track span {
   display: block;
   height: 100%;
-  background: #3454d1;
+  background: var(--primary);
   transform-origin: left;
   transition: transform 180ms var(--ease-out);
 }
@@ -1045,13 +1121,15 @@ h3,
   margin: 10px 0;
 }
 .score {
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: 30px;
-  letter-spacing: -1px;
+  font-weight: 500;
+  font-size: 28px;
+  letter-spacing: -0.03em;
 }
 .rank-row:has(> input:checked) {
-  background: #f5f7ff;
-  box-shadow: inset 3px 0 0 #3454d1;
+  background: var(--secondary);
+  box-shadow: inset 0 0 0 1px var(--accent-border);
 }
 .rank-row > input {
   width: 18px;
@@ -1061,7 +1139,7 @@ h3,
   margin-top: 24px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--card);
   overflow: hidden;
 }
 .comparison-panel h2 {
@@ -1088,7 +1166,7 @@ h3,
   vertical-align: top;
 }
 .comparison-scroll thead {
-  background: #f6f7fc;
+  background: var(--surface-2);
 }
 .comparison-scroll th {
   min-width: 150px;
@@ -1119,26 +1197,26 @@ h3,
   background: currentColor;
 }
 .evidence-status.full {
-  color: #187451;
+  color: var(--success);
 }
 .evidence-status.partial,
 .evidence-status.unclear {
-  color: #935b0d;
+  color: var(--warning);
 }
 .evidence-status.not_evidenced {
-  color: #626875;
+  color: var(--muted-foreground);
 }
 .comparison-empty {
   display: flex;
   align-items: center;
   gap: 18px;
-  border: 1px dashed #adb7d7;
+  border: 1px dashed var(--border-strong);
   padding: 24px;
   margin-top: 24px;
   border-radius: 12px;
 }
 .comparison-empty > svg {
-  color: #3454d1;
+  color: var(--primary);
   flex-shrink: 0;
 }
 .comparison-empty p {
@@ -1151,13 +1229,13 @@ h3,
   z-index: 10;
   justify-content: space-between;
   padding: 12px 18px;
-  background: #fff;
-  border: 1px solid #a7b7f2;
+  background: var(--card);
+  border: 1px solid var(--accent-border);
   border-radius: 12px;
-  box-shadow: 0 8px 30px #20242c12;
+  box-shadow: var(--shadow-overlay);
 }
 .selection-tray > span {
-  color: #3454d1;
+  color: var(--primary);
   font-weight: 600;
   font-size: 12px;
 }
@@ -1168,8 +1246,8 @@ h3,
   z-index: 100;
   transform: translateY(-160%);
   padding: 12px 20px;
-  background: white;
-  color: #20242c;
+  background: var(--card);
+  color: var(--foreground);
   border-radius: 8px;
 }
 .skip-link:focus {
@@ -1186,7 +1264,7 @@ h3,
   margin: 16px 0;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #eeede9;
+  background: var(--surface-2);
 }
 button {
   touch-action: manipulation;
@@ -1217,10 +1295,10 @@ select:focus-visible {
 }
 @media (hover: hover) and (pointer: fine) {
   button:not(:disabled):active {
-    transform: scale(0.985);
+    transform: scale(0.97);
   }
   .vacancy-row:hover {
-    background: #fafbff;
+    background: var(--surface-2);
   }
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -1268,11 +1346,6 @@ select:focus-visible {
   }
   .brand {
     padding: 0;
-    font-size: 22px;
-  }
-  .brandmark {
-    width: 27px;
-    height: 27px;
   }
   .sidebar nav button {
     min-height: 44px;

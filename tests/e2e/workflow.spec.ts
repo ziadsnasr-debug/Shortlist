@@ -18,7 +18,7 @@ test("complete synthetic batch, tie gate, immutable export", async ({
   await page
     .getByRole("button", { name: "Add sample CVs", exact: true })
     .click();
-  await expect(page.getByText("A106", { exact: true })).toBeVisible();
+  await expect(page.getByText("Candidate 06", { exact: true })).toBeVisible();
   const pending = await page.request.get("/api/workspace?reveal=true");
   const before = await pending.json();
   expect(before.vacancies[0].batches[0].ranking).toBeNull();
@@ -37,7 +37,7 @@ test("complete synthetic batch, tie gate, immutable export", async ({
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   for (let i = 0; i < 6; i++) {
     await expect(
-      page.getByText(`A${101 + i}`, { exact: true }).first(),
+      page.getByText(`Candidate 0${i + 1}`, { exact: true }).first(),
     ).toBeVisible();
     if (i === 1) {
       await page.getByLabel("Evidence category").nth(3).selectOption("FULL");
@@ -74,13 +74,13 @@ test("complete synthetic batch, tie gate, immutable export", async ({
   await expect(
     page.getByText("2 of 3 selected", { exact: true }),
   ).toBeVisible();
-  await page.getByLabel("Select A103", { exact: true }).check();
+  await page.getByLabel("Select Candidate 03", { exact: true }).check();
   const comparison = page.getByRole("region", {
     name: "Selected application comparison",
     exact: true,
   });
   await expect(
-    comparison.getByRole("columnheader", { name: "A103", exact: true }),
+    comparison.getByRole("columnheader", { name: "Candidate 03", exact: true }),
   ).toBeVisible();
   await expect(comparison.getByRole("row")).toHaveCount(7);
   for (const width of [390, 1440]) {
@@ -107,7 +107,9 @@ test("complete synthetic batch, tie gate, immutable export", async ({
   ).toBeVisible();
   await page
     .getByLabel("Boundary tie decision", { exact: true })
-    .fill("Reviewed tied sources and chose A103 based on reporting evidence.");
+    .fill(
+      "Reviewed tied sources and chose Candidate 03 based on reporting evidence.",
+    );
   await page
     .getByRole("button", { name: "Finalise shortlist", exact: true })
     .click();

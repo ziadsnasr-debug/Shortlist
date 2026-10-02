@@ -25,7 +25,7 @@ export function DocumentIntake({
   batchId: string;
   version: number;
   closed: boolean;
-  applications: Application[];
+  applications: (Pick<Application, "id" | "state"> & { label: string })[];
   onRefresh: () => void;
   send: (a: Action) => Promise<unknown>;
   enabled: boolean;
@@ -149,7 +149,10 @@ export function DocumentIntake({
           />
           {docs.map((d) => (
             <div className="intake-row" key={d.id}>
-              <span>{d.application_key}</span>
+              <span>
+                {applications.find((a) => a.id === d.application_key)?.label ??
+                  "Candidate"}
+              </span>
               <span>
                 {d.status} · {d.attempts} attempts
               </span>
@@ -201,7 +204,7 @@ export function DocumentIntake({
           .map((a) => (
             <div className="my-3" key={a.id}>
               <Button variant="outline" onClick={() => setManual(a.id)}>
-                Provide checked manual passages for {a.id}
+                Provide checked manual passages for {a.label}
               </Button>
               {manual === a.id && (
                 <form

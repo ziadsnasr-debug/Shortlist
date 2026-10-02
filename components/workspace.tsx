@@ -13,6 +13,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,6 +55,7 @@ import {
 import { sampleRubric } from "@/fixtures/synthetic/seed";
 type PublicApp = Omit<Application, "name"> & {
   name?: string;
+  label: string;
   score: number | null;
   blockers: string[];
 };
@@ -157,12 +159,7 @@ export function WorkspaceApp() {
         Skip to workspace
       </a>
       <aside className="sidebar">
-        <div className="brand">
-          <span className="brandmark">
-            <ListChecks aria-hidden="true" />
-          </span>
-          Shortlist
-        </div>
+        <Logo className="brand" />
         <div className="workspace-label">
           <span className="workspace-avatar">S</span>
           <div>
@@ -905,7 +902,7 @@ function Intake({
         batchId={batch.id}
         version={version}
         closed={batch.closed}
-        applications={batch.applications as Application[]}
+        applications={batch.applications}
         onRefresh={onRefresh}
         send={send}
         enabled={uploads}
@@ -939,7 +936,7 @@ function Intake({
             <div key={a.id} className="intake-row">
               <FileText aria-hidden="true" />
               <div>
-                <strong>{a.id}</strong>
+                <strong>{a.label}</strong>
                 <p>{a.file}</p>
                 {a.dispositionReason && (
                   <p>
@@ -1008,7 +1005,7 @@ function Intake({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Account for {disposition?.id}</DialogTitle>
+            <DialogTitle>Account for {disposition?.label}</DialogTitle>
             <DialogDescription>
               Only genuine duplicates, withdrawals and wrong-vacancy
               submissions. Low scoring CVs still require review.
@@ -1108,7 +1105,7 @@ function Review({
         </span>
       </div>
       <div className="review-selector">
-        <strong>{app.id}</strong>
+        <strong>{app.label}</strong>
         <span>
           {app.file} · {index + 1} of {apps.length}
         </span>
@@ -1384,7 +1381,7 @@ function ReviewForm({
           <div className="source-header">
             <h2>Source context</h2>
             <p>
-              {app.id} · Minimised synthetic source view · Claims remain
+              {app.label} · Minimised synthetic source view · Claims remain
               unverified
             </p>
             <p>
@@ -1552,7 +1549,7 @@ function Shortlist({
           return (
             <div className="rank-row" key={row.id}>
               <input
-                aria-label={`Select ${row.id}`}
+                aria-label={`Select ${app.label}`}
                 type="checkbox"
                 checked={selected.includes(row.id)}
                 disabled={
@@ -1570,7 +1567,7 @@ function Shortlist({
                 }}
               />
               <div>
-                <h3>{reveal ? app.name : row.id}</h3>
+                <h3>{reveal ? app.name : app.label}</h3>
                 <ScoreBar score={row.score} />
                 <p>
                   {row.essentials.length
@@ -1580,7 +1577,7 @@ function Shortlist({
                 {selected.includes(row.id) && row.essentials.length > 0 && (
                   <Field className="mt-3">
                     <FieldLabel htmlFor={`exception-${row.id}`}>
-                      Essential exception for {row.id}
+                      Essential exception for {app.label}
                     </FieldLabel>
                     <Textarea
                       id={`exception-${row.id}`}
