@@ -30,3 +30,7 @@ account; use the explicit CLI profile for Shortlist.
 Free projects may pause after a week of inactivity. OpenAI and Vercel usage are
 separate from Supabase's free plan. Deployment readiness does not establish
 successful authenticated document processing; record that acceptance separately.
+
+## Synthetic acceptance
+
+Phase 1 verified browser MFA with a controlled disposable test account, fictional PDF/DOCX uploads, managed parsing, two OpenAI passes, human review, hidden ranking, finalisation/export/reload and narrow-screen/accessibility checks. `tests/hosted-acceptance.ts` requires explicit fictional-only confirmation, a private environment file and enabled OpenAI configuration. Cleanup verifies membership removal and soft-deletes the test account while preserving historical audit; deletion tombstones respect signed-upload expiry. This is synthetic acceptance, not real-data permission, hosted disaster recovery or independent model-quality evaluation.
