@@ -75,6 +75,25 @@ test("complete synthetic batch, tie gate, immutable export", async ({
     page.getByText("2 of 3 selected", { exact: true }),
   ).toBeVisible();
   await page.getByLabel("Select A103", { exact: true }).check();
+  const comparison = page.getByRole("region", {
+    name: "Selected application comparison",
+    exact: true,
+  });
+  await expect(
+    comparison.getByRole("columnheader", { name: "A103", exact: true }),
+  ).toBeVisible();
+  await expect(comparison.getByRole("row")).toHaveCount(7);
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await expect(comparison).toBeVisible();
+  }
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+
   await page
     .getByLabel("Selection reason (required, including an empty shortlist)")
     .fill("Selected the strongest confirmed evidence for this synthetic role.");
