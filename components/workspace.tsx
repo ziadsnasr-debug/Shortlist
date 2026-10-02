@@ -339,6 +339,8 @@ export function WorkspaceApp() {
               canEdit={isAdmin}
               onDirty={setUnsaved}
               onNext={() => navigate(stepPath(1))}
+              version={state.version}
+              onReload={refresh}
             />
           )}
           {step === 1 && (
