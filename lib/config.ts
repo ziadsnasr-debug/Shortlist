@@ -15,11 +15,11 @@ export function configuration() {
     ai: {
       enabled:
         process.env.AI_ENABLED === "true" &&
-        !!process.env.ANTHROPIC_API_KEY &&
+        !!process.env.OPENAI_API_KEY &&
         !!process.env.AI_MODEL_ID,
-      provider: "anthropic",
+      provider: "openai",
       model: process.env.AI_MODEL_ID ?? null,
-      promptVersion: "evidence-v1",
+      promptVersion: "evidence-v2-openai",
       schemaVersion: 1,
       timeoutMs: 45000,
       passes: 2,
@@ -36,4 +36,9 @@ export function configuration() {
       parserMs: 30000,
     },
   } as const;
+}
+
+export function processingVersion() {
+  const c = configuration();
+  return `${c.ai.promptVersion}:${c.ai.provider}:${process.env.AI_ENABLED === "true" ? (c.ai.model ?? "unconfigured") : "manual"}:${process.env.PARSER_BUNDLE_SHA256 ?? "unconfigured"}`;
 }

@@ -10,3 +10,4 @@ context/zed-vault
 supabase/.temp/
 supabase/.branches/
 outputs/
+.vercel

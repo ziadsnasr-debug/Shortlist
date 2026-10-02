@@ -1,4 +1,5 @@
 import "server-only";
+import { processingVersion } from "../config";
 import { randomUUID } from "node:crypto";
 import { databaseClient } from "../supabase";
 import { readState, type Owner } from "../store";
@@ -97,7 +98,7 @@ export async function finaliseUpload(access: Owner, id: string) {
     Number.isInteger(allowance) && allowance > 0 && allowance <= 1000,
     "Processing allowance configuration invalid.",
   );
-  const config = `evidence-v1:${process.env.AI_ENABLED === "true" ? process.env.AI_MODEL_ID : "manual"}:${process.env.PARSER_BUNDLE_SHA256 ?? "unconfigured"}`;
+  const config = processingVersion();
   const { data: queued, error: qerror } = await db.rpc("enqueue_document", {
     p_workspace: access.workspaceId,
     p_actor: access.actor,

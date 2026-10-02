@@ -65,7 +65,7 @@ async function cleanupWorkspace(workspaceId: string) {
       "-d",
       "postgres",
       "-c",
-      `delete from public.application_reviews where application_id in (select a.id from public.applications a join public.batches b on b.id=a.batch_id join public.vacancies v on v.id=b.vacancy_id where v.workspace_id='${workspaceId}'); delete from public.assessment_runs where application_id in (select a.id from public.applications a join public.batches b on b.id=a.batch_id join public.vacancies v on v.id=b.vacancy_id where v.workspace_id='${workspaceId}'); delete from public.source_blocks where document_id in (select id from public.documents where workspace_id='${workspaceId}'); delete from public.documents where workspace_id='${workspaceId}'; delete from public.applications where batch_id in (select b.id from public.batches b join public.vacancies v on v.id=b.vacancy_id where v.workspace_id='${workspaceId}'); delete from public.batches where vacancy_id in (select id from public.vacancies where workspace_id='${workspaceId}'); delete from public.vacancies where workspace_id='${workspaceId}'; delete from public.processing_allowances where workspace_id='${workspaceId}'; delete from public.deletion_ledger where workspace_id='${workspaceId}'; delete from public.audit_events where workspace_id='${workspaceId}';`,
+      `delete from pgmq.q_shortlist_documents where message->>'document_id' in (select id::text from public.documents where workspace_id='${workspaceId}'); delete from public.application_reviews where application_id in (select a.id from public.applications a join public.batches b on b.id=a.batch_id join public.vacancies v on v.id=b.vacancy_id where v.workspace_id='${workspaceId}'); delete from public.assessment_runs where application_id in (select a.id from public.applications a join public.batches b on b.id=a.batch_id join public.vacancies v on v.id=b.vacancy_id where v.workspace_id='${workspaceId}'); delete from public.source_blocks where document_id in (select id from public.documents where workspace_id='${workspaceId}'); delete from public.documents where workspace_id='${workspaceId}'; delete from public.applications where batch_id in (select b.id from public.batches b join public.vacancies v on v.id=b.vacancy_id where v.workspace_id='${workspaceId}'); delete from public.batches where vacancy_id in (select id from public.vacancies where workspace_id='${workspaceId}'); delete from public.vacancies where workspace_id='${workspaceId}'; delete from public.processing_allowances where workspace_id='${workspaceId}'; delete from public.deletion_ledger where workspace_id='${workspaceId}'; delete from public.audit_events where workspace_id='${workspaceId}';`,
     ],
     { stdio: "ignore" },
   );
@@ -202,6 +202,8 @@ try {
       env: {
         ...process.env,
         PERSISTENCE_MODE: "supabase-synthetic",
+        AI_ENABLED: "false",
+        PARSER_SNAPSHOT_ID: "",
         NEXT_PUBLIC_SUPABASE_URL: settings.API_URL,
         NEXT_PUBLIC_SUPABASE_ANON_KEY: settings.ANON_KEY,
         SUPABASE_SERVICE_ROLE_KEY: settings.SERVICE_ROLE_KEY,
@@ -295,6 +297,7 @@ try {
     ).status === 403,
     "Reviewer cannot inspect admin records.",
   );
+  assert((await adminAction(reviewerCookie, { type: "process" })).status === 403, "Reviewer cannot trigger administrative processing.");
   assert(
     (
       await adminAction(reviewerCookie, {
@@ -576,6 +579,7 @@ try {
   const document = (
     await db.from("documents").select("*").eq("id", documentId).single()
   ).data!;
+  assert(document.processing_config === "test-v1", "Enqueue must persist the exact processing configuration.");
   assert(
     (await db.rpc("document_attempt", { p_document: documentId })).data ===
       true,
@@ -658,6 +662,7 @@ try {
         p_workspace: workspaceId,
         p_actor: admin.id,
         p_document: documentId,
+        p_config: "test-v2",
       })
     ).data === true,
     "Explicit retry should recover attention state.",
@@ -666,6 +671,10 @@ try {
     (await db.rpc("document_attempt", { p_document: documentId })).data ===
       true,
   );
+  const retried = (await db.from("documents").select("processing_key,processing_config").eq("id", documentId).single()).data!;
+  assert(retried.processing_config === "test-v2", "Explicit retry pins the new configuration.");
+  assert((await db.rpc("complete_document", completeArgs)).data === false, "Previous configuration cannot commit after retry.");
+  completeArgs.p_key = retried.processing_key;
   const completion = await db.rpc("complete_document", completeArgs);
   assert(!completion.error && completion.data, "Atomic completion failed.");
   assert(

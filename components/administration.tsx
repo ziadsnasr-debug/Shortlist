@@ -20,7 +20,8 @@ type Admin = {
 export function Administration() {
   const [data, setData] = useState<Admin | null>(null),
     [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [notice, setNotice] = useState("");
   async function load() {
     const r = await fetch("/api/administration", { cache: "no-store" }),
       d = await r.json();
@@ -41,6 +42,11 @@ export function Administration() {
         d = await r.json();
       if (!r.ok) throw new Error(d.error);
       setError("");
+      setNotice(
+        "completed" in d
+          ? `${d.completed} files processed; ${d.failed} need recovery. Refresh status after pending jobs finish.`
+          : "Saved.",
+      );
       await load();
     } catch (e) {
       setError((e as Error).message);
@@ -52,6 +58,7 @@ export function Administration() {
     <section className="panel">
       <h1>Administration</h1>
       {error && <p role="alert">{error}</p>}
+      {notice && <p role="status">{notice}</p>}
       {data && (
         <>
           <h2>Workspace controls</h2>
@@ -139,6 +146,32 @@ export function Administration() {
             </div>
           ))}
           <h2 className="mt-6">Processing and deletion</h2>
+          <p>
+            Uploads start processing automatically. Scheduled recovery runs
+            daily on the current plan. Process up to two pending files now, or
+            refresh to check an existing job.
+          </p>
+          <div className="flex flex-wrap gap-2 my-3">
+            <Button
+              disabled={busy || data.settings.paused}
+              onClick={() => void send({ type: "process" })}
+            >
+              {busy ? "Working…" : "Process pending files"}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => void load().catch((e) => setError(e.message))}
+            >
+              Refresh status
+            </Button>
+          </div>
+          {data.settings.paused && (
+            <p>
+              Processing is paused. Resume in Workspace controls before
+              processing files.
+            </p>
+          )}
           {data.documents.map((d) => (
             <p key={d.id}>
               {d.id}: {d.status} · {d.safe_error_code ?? "No error"} ·{" "}

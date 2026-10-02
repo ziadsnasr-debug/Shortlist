@@ -1,16 +1,16 @@
 import "server-only";
 import { generateText, Output } from "ai";
-import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { OutputSchema, validatePass, mergePasses } from "../assessment";
 import { configuration } from "../config";
 import { Criterion, type Application, validateRubric } from "../workflow";
-export const AI_VERSION = "evidence-v1";
+export const AI_VERSION = "evidence-v2-openai";
 export function aiSettings() {
   if (process.env.AI_ENABLED !== "true") return null;
   if (process.env.REAL_CV_DATA_ENABLED === "true")
     throw new Error("REAL_DATA_DISABLED");
-  if (!process.env.ANTHROPIC_API_KEY || !process.env.AI_MODEL_ID)
+  if (!process.env.OPENAI_API_KEY || !process.env.AI_MODEL_ID)
     throw new Error("AI_NOT_CONFIGURED");
   // Exact direct route; no custom gateway URL and no fallback.
   return { ...configuration().ai, model: process.env.AI_MODEL_ID };
@@ -30,7 +30,7 @@ export async function assess(
       usage: [],
       mode: "manual",
     };
-  const provider = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const provider = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const prompt = JSON.stringify({
     approvedCriteria: rubric.map(({ id, title, full, partial }) => ({
       id,
@@ -49,7 +49,7 @@ export async function assess(
     await beforePass?.();
     try {
       const result = await generateText({
-        model: provider(config.model),
+        model: provider.responses(config.model),
         system,
         prompt,
         output: Output.object({ schema: OutputSchema }),
@@ -58,7 +58,11 @@ export async function assess(
         maxRetries: 0,
         experimental_telemetry: { isEnabled: false },
         providerOptions: {
-          anthropic: { structuredOutputMode: "outputFormat" },
+          openai: {
+            store: false,
+            reasoningEffort: "low",
+            strictJsonSchema: true,
+          },
         },
       });
       outputs.push(validatePass(result.output, rubric, app));
@@ -75,7 +79,7 @@ export async function assess(
     assessments: mergePasses(outputs[0], outputs[1], rubric, app),
     outputs,
     usage,
-    mode: "anthropic",
+    mode: "openai",
   };
 }
 const Draft = z
@@ -90,7 +94,7 @@ export async function draftCriteria(description: string) {
   const config = aiSettings();
   if (!config) throw new Error("AI_NOT_CONFIGURED");
   const result = await generateText({
-    model: createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(
+    model: createOpenAI({ apiKey: process.env.OPENAI_API_KEY }).responses(
       config.model,
     ),
     system:
@@ -101,6 +105,9 @@ export async function draftCriteria(description: string) {
     maxRetries: 0,
     abortSignal: AbortSignal.timeout(45000),
     experimental_telemetry: { isEnabled: false },
+    providerOptions: {
+      openai: { store: false, reasoningEffort: "low", strictJsonSchema: true },
+    },
   });
   const rubric = result.output.criteria.map((c, i) => ({
     ...c,

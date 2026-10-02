@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
+import { processingVersion } from "@/lib/config";
 import { rateLimit } from "@/lib/rate-limit";
 import { owner } from "@/lib/store";
 import { jsonBody, fail, privateHeaders } from "@/lib/http";
@@ -72,6 +73,7 @@ export async function POST(req: NextRequest) {
         p_workspace: access.workspaceId,
         p_actor: access.actor,
         p_document: input.documentId,
+        p_config: processingVersion(),
       });
       if (error || !data)
         throw new WorkflowError("Retry unavailable for this document.", 422);

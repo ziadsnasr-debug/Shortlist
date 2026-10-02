@@ -1,5 +1,5 @@
 import "server-only";
-import { configuration } from "../config";
+import { configuration, processingVersion } from "../config";
 import { z } from "zod";
 import { databaseClient } from "../supabase";
 import type { Application, Workspace } from "../workflow";
@@ -66,6 +66,8 @@ export async function consumeDocuments() {
       continue;
     }
     try {
+      if (d.processing_config !== processingVersion())
+        throw new Error("PROCESSING_CONFIGURATION_CHANGED");
       const { error: budget } = await db.rpc("reserve_processing_budget", {
         p_workspace: d.workspace_id,
         p_limit: Number(process.env.MONTHLY_PROCESSING_ALLOWANCE ?? 240),
