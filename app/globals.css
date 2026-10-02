@@ -712,7 +712,7 @@ textarea {
   opacity: 1 !important;
   color: #20242c;
 }
-[data-sonner-toast][data-visible="true"] [data-content] {
+[data-sonner-toast] [data-content] {
   opacity: 1 !important;
 }
 
