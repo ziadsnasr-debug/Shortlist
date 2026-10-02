@@ -2,6 +2,16 @@
 import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { formatAge } from "@/lib/operation-status";
+const stageLabels: { [stage: string]: string } = {
+  awaiting_upload: "Awaiting upload",
+  queued: "Queued or processing",
+  processing: "Processing",
+  ready: "Ready for review",
+  needs_readable_copy: "Needs readable copy",
+  attention: "Needs attention",
+  deleted: "Deleted",
+};
 type Admin = {
   settings: {
     paused: boolean;
@@ -11,11 +21,29 @@ type Admin = {
   members: { user_id: string; active: boolean; role: string }[];
   documents: {
     id: string;
+    application_key: string;
     status: string;
+    stage: string;
+    attempts: number;
+    reserved_at: string;
+    reservation_age_seconds: number | null;
     safe_error_code: string | null;
+    safe_error_message: string | null;
     deletion_state: string;
   }[];
-  deletions: { id: string; completed_at: string | null }[];
+  deletions: {
+    id: string;
+    entity_id: string;
+    ready_after: string;
+    completed_at: string | null;
+  }[];
+  processing: {
+    total: number;
+    awaiting_upload: number;
+    queued_or_processing: number;
+    ready: number;
+    attention: number;
+  };
 };
 export function Administration() {
   const [data, setData] = useState<Admin | null>(null),
@@ -172,11 +200,25 @@ export function Administration() {
               processing files.
             </p>
           )}
+          <h3>Processing status</h3>
+          <p role="status">
+            {data.processing.total} retained files:{" "}
+            {data.processing.awaiting_upload} awaiting upload,{" "}
+            {data.processing.queued_or_processing} queued or processing,{" "}
+            {data.processing.ready} ready, {data.processing.attention} needing
+            attention.
+          </p>
           {data.documents.map((d) => (
-            <p key={d.id}>
-              {d.id}: {d.status} · {d.safe_error_code ?? "No error"} ·{" "}
-              {d.deletion_state}
-            </p>
+            <div className="intake-row" key={d.id}>
+              <span>
+                {d.application_key} ·{" "}
+                {stageLabels[d.stage] ?? "Status unavailable"} ·{" "}
+                {d.attempts} attempts ·{" "}
+                reservation age {formatAge(d.reservation_age_seconds)}
+                {d.safe_error_message &&
+                  " · " + d.safe_error_message}
+              </span>
+            </div>
           ))}
           <form
             className="grid gap-3 mt-4"
@@ -222,6 +264,17 @@ export function Administration() {
             {data.deletions.filter((d) => !d.completed_at).length} pending
             deletion records. Use documented recovery and deletion runbooks.
           </p>
+          {data.deletions.some((d) => !d.completed_at) && (
+            <p>
+              Earliest safe deletion completion (not an SLA):{" "}
+              {new Date(
+                data.deletions
+                  .filter((d) => !d.completed_at)
+                  .map((d) => d.ready_after)
+                  .sort()[0],
+              ).toLocaleString()}
+            </p>
+          )}
         </>
       )}
     </section>

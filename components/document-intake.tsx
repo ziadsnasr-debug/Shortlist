@@ -1,16 +1,49 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
 import type { Action, Application } from "@/lib/workflow";
-type Record = {
+import { formatAge } from "@/lib/operation-status";
+type DocumentRecord = {
   id: string;
   application_key: string;
   status: string;
   attempts: number;
+  stage:
+    | "awaiting_upload"
+    | "queued"
+    | "processing"
+    | "ready"
+    | "needs_readable_copy"
+    | "attention"
+    | "deleted";
+  reservation_age_seconds: number | null;
+  safe_error_message: string | null;
 };
+const stageLabels: { [stage: string]: string } = {
+  awaiting_upload: "Awaiting upload",
+  queued: "Queued or processing",
+  processing: "Processing",
+  ready: "Ready for review",
+  needs_readable_copy: "Needs readable copy",
+  attention: "Needs attention",
+  deleted: "Deleted",
+};
+function stepSummary(stage: DocumentRecord["stage"]) {
+  if (stage === "awaiting_upload")
+    return "Upload awaiting completion · Queue pending · Processing pending · Review pending";
+  if (stage === "queued")
+    return "Upload complete · Queue queued or processing · Review pending";
+  if (stage === "processing")
+    return "Upload complete · Queue complete · Processing in progress · Review pending";
+  if (stage === "ready")
+    return "Upload complete · Queue complete · Processing complete · Ready for review";
+  if (stage === "needs_readable_copy")
+    return "Upload complete · Queue complete · Needs a checked readable copy";
+  return "Upload complete · Queue complete · Needs processing attention";
+}
 export function DocumentIntake({
   vacancyId,
   batchId,
@@ -30,11 +63,26 @@ export function DocumentIntake({
   send: (a: Action) => Promise<unknown>;
   enabled: boolean;
 }) {
-  const [docs, setDocs] = useState<Record[]>([]),
+  const [docs, setDocs] = useState<DocumentRecord[]>([]),
     [busy, setBusy] = useState(false),
     [synthetic, setSynthetic] = useState(false),
     [manual, setManual] = useState(""),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [refreshError, setRefreshError] = useState(""),
+    [uploadStep, setUploadStep] = useState<
+      "idle" | "reserving" | "transferring" | "queueing"
+    >("idle");
+  const refresh = useCallback(async () => {
+    try {
+      const r = await fetch("/api/documents", { cache: "no-store" }),
+        d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      setDocs(d.documents);
+      setRefreshError("");
+    } catch {
+      setRefreshError("Unable to refresh processing status. Try again.");
+    }
+  }, []);
   async function action(body: unknown) {
     const r = await fetch("/api/documents", {
         method: "POST",
@@ -47,24 +95,15 @@ export function DocumentIntake({
   }
   useEffect(() => {
     if (!enabled) return;
-    let alive = true;
-    async function refresh() {
-      try {
-        const r = await fetch("/api/documents", { cache: "no-store" }),
-          d = await r.json();
-        if (alive && r.ok) setDocs(d.documents);
-      } catch {}
-    }
     void refresh();
     const timer = setInterval(() => {
       void refresh();
       onRefresh();
     }, 6000);
     return () => {
-      alive = false;
       clearInterval(timer);
     };
-  }, [enabled, onRefresh]);
+  }, [enabled, onRefresh, refresh]);
   return (
     <section className="panel">
       <h3>Synthetic document intake</h3>
@@ -73,6 +112,7 @@ export function DocumentIntake({
         fixtures only.
       </p>
       {error && <p role="alert">{error}</p>}
+      {refreshError && <p role="alert">{refreshError}</p>}
       {!enabled ? (
         <p>
           File intake needs configured Supabase staging and a verified parser
@@ -107,6 +147,7 @@ export function DocumentIntake({
                     : null;
                 if (!type || file.size > 5242880)
                   throw new Error("Choose PDF or DOCX up to 5 MiB.");
+                setUploadStep("reserving");
                 const reservation = await action({
                   type: "reserve",
                   version,
@@ -117,6 +158,7 @@ export function DocumentIntake({
                   fileType: type,
                   synthetic: true,
                 });
+                setUploadStep("transferring");
                 const uploaded = await fetch(reservation.uploadUrl, {
                   method: "PUT",
                   headers: {
@@ -131,6 +173,7 @@ export function DocumentIntake({
                   throw new Error(
                     "Upload incomplete; reserved item remains visible.",
                   );
+                setUploadStep("queueing");
                 await action({
                   type: "finalise",
                   documentId: reservation.documentId,
@@ -142,19 +185,39 @@ export function DocumentIntake({
                 setError((e as Error).message);
               } finally {
                 setBusy(false);
+                setUploadStep("idle");
                 onRefresh();
                 e.target.value = "";
               }
             }}
           />
-          {docs.map((d) => (
+          <p role="status" aria-live="polite">
+            {uploadStep === "reserving" && "Reserving a private upload slot…"}
+            {uploadStep === "transferring" && "Uploading the fictional file…"}
+            {uploadStep === "queueing" && "Queueing the uploaded file…"}
+          </p>
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={() => void refresh()}
+          >
+            Refresh processing status
+          </Button>
+          {docs
+            .filter((d) => applications.some((a) => a.id === d.application_key))
+            .map((d) => (
             <div className="intake-row" key={d.id}>
               <span>
                 {applications.find((a) => a.id === d.application_key)?.label ??
                   "Candidate"}
               </span>
               <span>
-                {d.status} · {d.attempts} attempts
+                <strong>{stageLabels[d.stage] ?? "Status unavailable"}</strong> ·{" "}
+                {d.attempts} attempts · reservation
+                age {formatAge(d.reservation_age_seconds)}
+                {d.safe_error_message && " · " + d.safe_error_message}
+                <br />
+                <small>{stepSummary(d.stage)}</small>
               </span>
               <Button
                 variant="outline"
