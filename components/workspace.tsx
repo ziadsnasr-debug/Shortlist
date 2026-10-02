@@ -34,6 +34,7 @@ import { Stepper } from "./workflow/stepper";
 import { Sidebar } from "./workflow/sidebar";
 import { VacanciesHome } from "./workflow/home";
 import { NewVacancy } from "./workflow/new-vacancy";
+import { CommandMenu } from "./workflow/command-menu";
 
 const leaveMessage = "Save your draft before leaving this step.";
 
@@ -48,6 +49,7 @@ export function WorkspaceApp() {
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [help, setHelp] = useState(false),
+    [jump, setJump] = useState(false),
     [reveal, setReveal] = useState(false);
   const firstRender = useRef(true);
   useEffect(() => {
@@ -411,6 +413,16 @@ export function WorkspaceApp() {
         isAdmin={isAdmin && !state?.temporaryPublic}
         role={state?.role ?? "reviewer"}
         canSignOut={state?.mode === "Supabase synthetic"}
+        navigate={navigate}
+        onHelp={() => setHelp(true)}
+        onJump={() => setJump(true)}
+      />
+      <CommandMenu
+        open={jump}
+        onOpenChange={setJump}
+        vacancies={state?.vacancies ?? []}
+        route={route}
+        isAdmin={isAdmin}
         navigate={navigate}
         onHelp={() => setHelp(true)}
       />

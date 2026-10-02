@@ -14,7 +14,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { allocationText } from "./workflow/criteria/model";
-import { type Application, type Criterion, labels } from "@/lib/workflow";
+import type { Application } from "@/lib/workflow";
+import { type Criterion, labels } from "@/lib/rules";
 
 /**
  * Sticky allocation bar for the criteria step. Each criterion is a segment
