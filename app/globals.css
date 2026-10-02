@@ -2696,3 +2696,297 @@ receipt and finish mark. */
     white-space: nowrap;
   }
 }
+
+/* Brand moments: atmosphere, focus card, floating header, page transitions. */
+.atmosphere {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      60% 55% at 72% 38%,
+      rgb(84 185 165 / 0.38),
+      transparent 70%
+    ),
+    radial-gradient(45% 50% at 18% 85%, rgb(0 116 99 / 0.35), transparent 72%),
+    linear-gradient(160deg, #051e27 0%, #07303a 55%, #04161d 100%);
+}
+.atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgb(5 30 39 / 0.55));
+}
+.atmo-bar {
+  position: absolute;
+  height: 13%;
+  border-radius: 999px;
+  background: linear-gradient(
+    120deg,
+    rgb(229 237 238 / 0.22),
+    rgb(84 185 165 / 0.12) 55%,
+    rgb(229 237 238 / 0.05)
+  );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    inset 0 -12px 24px rgb(5 30 39 / 0.25),
+    0 24px 60px rgb(0 0 0 / 0.25);
+  transform: rotate(-14deg);
+}
+.atmo-bar-1 {
+  top: 18%;
+  left: 38%;
+  width: 70%;
+  background: linear-gradient(
+    120deg,
+    rgb(108 210 188 / 0.5),
+    rgb(84 185 165 / 0.18) 60%,
+    rgb(229 237 238 / 0.06)
+  );
+}
+.atmo-bar-2 {
+  top: 36%;
+  left: 30%;
+  width: 52%;
+}
+.atmo-bar-3 {
+  top: 54%;
+  left: 22%;
+  width: 34%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .atmo-bar {
+    animation: atmo-drift 16s var(--ease-in-out) infinite alternate;
+  }
+  .atmo-bar-2 {
+    animation-duration: 19s;
+    animation-delay: -4s;
+  }
+  .atmo-bar-3 {
+    animation-duration: 22s;
+    animation-delay: -9s;
+  }
+}
+@keyframes atmo-drift {
+  from {
+    transform: translate3d(0, 0, 0) rotate(-14deg);
+  }
+  to {
+    transform: translate3d(-4%, 3%, 0) rotate(-11deg);
+  }
+}
+
+.focus-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: grid;
+  gap: 18px;
+  align-content: end;
+  min-height: 220px;
+  padding: 28px 32px;
+  margin-bottom: 20px;
+  border-radius: 16px;
+  color: #e5edee;
+}
+.focus-card .atmosphere {
+  z-index: -1;
+}
+.focus-card .focus-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9fd9cc;
+}
+.focus-card .focus-eyebrow::before {
+  content: "";
+  width: 28px;
+  height: 1px;
+  background: currentColor;
+}
+.focus-card h2 {
+  font-size: clamp(26px, 3.2vw, 40px);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  color: #fdffff;
+  max-width: 18ch;
+}
+.focus-card p {
+  color: #b9c9cc;
+  max-width: 48ch;
+  font-size: 14px;
+}
+.focus-card .focus-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.focus-card .focus-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: #fdffff;
+  color: #051e27;
+  font-weight: 500;
+  font-size: 14px;
+  text-decoration: none;
+  transition:
+    transform var(--dur-press) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+.focus-card .focus-primary:hover {
+  background: #dff6f0;
+}
+.focus-card .focus-primary:active {
+  transform: scale(0.97);
+}
+.focus-card .focus-primary:focus-visible {
+  outline: 2px solid #54b9a5;
+  outline-offset: 3px;
+}
+.focus-card .focus-primary svg {
+  width: 16px;
+  height: 16px;
+}
+.focus-card .focus-meta {
+  font: 400 12px/1.4 var(--font-mono);
+  color: #9da7a9;
+}
+@media (max-width: 680px) {
+  .focus-card {
+    min-height: 200px;
+    padding: 22px 20px;
+    border-radius: 14px;
+  }
+}
+
+/* Floating header: stays with you on long pages. */
+.demo-banner {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  background: color-mix(in oklab, var(--background) 82%, transparent);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+}
+.here {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--foreground);
+}
+.here strong {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.here span {
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .here {
+    animation: here-in var(--dur-base) var(--ease-out);
+  }
+}
+@keyframes here-in {
+  from {
+    transform: translateY(4px);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .demo-banner {
+    background: var(--background);
+    backdrop-filter: none;
+  }
+}
+@media (max-width: 767px) {
+  .demo-banner {
+    top: 64px;
+  }
+}
+
+/* Page changes cross-fade the content only; navigation stays put. */
+.page {
+  view-transition-name: page;
+}
+::view-transition-old(page) {
+  animation: vt-out 120ms var(--ease-out) both;
+}
+::view-transition-new(page) {
+  animation: vt-in 220ms var(--ease-out) both;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+@keyframes vt-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(page),
+  ::view-transition-new(page) {
+    animation: none;
+  }
+}
+/* On the wide focus card the bars sit right of the text, sized to the card. */
+.focus-card .atmo-bar {
+  height: 56px;
+}
+.focus-card .atmo-bar-1 {
+  top: 22%;
+  left: 62%;
+  width: 380px;
+}
+.focus-card .atmo-bar-2 {
+  top: 46%;
+  left: 58%;
+  width: 280px;
+}
+.focus-card .atmo-bar-3 {
+  top: 70%;
+  left: 54%;
+  width: 180px;
+}
+.focus-card .atmosphere::after {
+  background: linear-gradient(
+    90deg,
+    rgb(5 30 39 / 0.85) 0%,
+    rgb(5 30 39 / 0.55) 40%,
+    transparent 70%
+  );
+}
+@media (max-width: 760px) {
+  .focus-card .atmo-bar-1 {
+    left: 55%;
+    width: 220px;
+  }
+  .focus-card .atmo-bar-2 {
+    left: 62%;
+    width: 160px;
+  }
+  .focus-card .atmo-bar-3 {
+    display: none;
+  }
+}

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight, CircleAlert, Copy } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
+import { Atmosphere } from "@/components/brand/atmosphere";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -128,16 +129,18 @@ export default function Login() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground min-[900px]:grid min-[900px]:grid-cols-[2fr_3fr]">
-      <header className="flex h-14 shrink-0 items-center bg-sidebar px-4 text-sidebar-foreground min-[900px]:sticky min-[900px]:top-0 min-[900px]:h-dvh min-[900px]:flex-col min-[900px]:items-start min-[900px]:justify-between min-[900px]:px-12 min-[900px]:py-12">
+      <header className="relative isolate flex h-14 shrink-0 items-center overflow-hidden bg-sidebar px-4 text-sidebar-foreground min-[900px]:sticky min-[900px]:top-0 min-[900px]:h-dvh min-[900px]:flex-col min-[900px]:items-start min-[900px]:justify-between min-[900px]:px-12 min-[900px]:py-12">
+        <Atmosphere className="-z-10 hidden min-[900px]:block" />
         <div className="[--logo-accent:var(--sidebar-accent)]">
           <Logo className="gap-2.5 text-lg font-semibold tracking-[-0.02em]" />
         </div>
-        <div className="hidden max-w-sm min-[900px]:block">
-          <p className="text-balance text-[1.75rem] leading-tight font-semibold tracking-[-0.03em] text-sidebar-foreground!">
-            Evidence first. You decide.
-          </p>
-          <p className="mt-4 text-sm text-(--sidebar-muted)!">
-            This is a synthetic proof of concept. It uses fictional CVs only.
+        <div className="hidden max-w-md min-[900px]:block">
+          <div className="mb-8 max-w-xs border-t border-white/25 pt-3 text-[13px] leading-relaxed text-(--sidebar-muted)!">
+            A synthetic proof of concept. Every CV here is fictional, and every
+            decision is made by a person.
+          </div>
+          <p className="text-balance text-[clamp(2.25rem,3.4vw,3.25rem)] leading-[1.02] font-medium tracking-[-0.04em] text-sidebar-foreground!">
+            Evidence first. <span className="block">You decide.</span>
           </p>
         </div>
       </header>
