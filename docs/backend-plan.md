@@ -2,14 +2,14 @@
 
 V1.2 and mandatory Appendix A remain authoritative. The implemented local synthetic app is workable; deployment, privacy and independent pilot acceptance are separate exit gates. No paid hosted backend is authorized.
 
-| Canonical stage         | Current backend scope                                                                                                                    | Next exit gate                                                                             |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| 1 Workflow              | Four steps, 100-point rubric, deterministic scores, human review, hidden ranking, 0–3 shortlist, immutable final adjudication            | Independent recruiter completes a batch unaided                                            |
-| 2 Persistence/ownership | Local Supabase, private objects, MFA/membership/RLS, transactional saves and invitations                                                 | Customer-owned hosted accounts, approved sender, delivered invitation and revocation tests |
-| 3 Documents/queue       | PDF/DOCX isolated parser, private queue, visible handling states, bounded attempts, configuration pinning, deletion and restore recovery | Hosted fault injection and independent isolation review                                    |
-| 4 Evidence AI           | One direct OpenAI route, two bounded calls, strict references, ambiguity handling, editable draft criteria                               | Customer-approved data route and independently audited support correctness                 |
-| 5 Pilot                 | Fixtures, paired attacks, timing/metrics tools, browser/accessibility/access tests                                                       | Independent labels, actual held-out/repeat/paired results and three timed 20-CV reviews    |
-| 6 Acceptance            | Reproducible migrations/setup, private backup/export/restore, handover                                                                   | Another operator deploys/restores, customer signs off, developer access removed            |
+| Canonical stage         | Current backend scope                                                                                                                                      | Next exit gate                                                                            |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 1 Workflow              | Four steps, 100-point rubric, deterministic scores, human review, hidden ranking, 0–3 shortlist, immutable final adjudication                              | Independent recruiter completes a batch unaided                                           |
+| 2 Persistence/ownership | Local Supabase, private objects, MFA/membership/RLS, transactional saves and invitations; isolated Free Supabase and Vercel production configuration exist | Authenticated hosted workflow, approved sender, delivered invitation and revocation tests |
+| 3 Documents/queue       | PDF/DOCX isolated parser, private queue, visible handling states, bounded attempts, configuration pinning, deletion and restore recovery                   | Hosted fault injection and independent isolation review                                   |
+| 4 Evidence AI           | One direct OpenAI route, two bounded calls, strict references, ambiguity handling, editable draft criteria                                                 | Customer-approved data route and independently audited support correctness                |
+| 5 Pilot                 | Fixtures, paired attacks, timing/metrics tools, browser/accessibility/access tests                                                                         | Independent labels, actual held-out/repeat/paired results and three timed 20-CV reviews   |
+| 6 Acceptance            | Reproducible migrations/setup, private backup/export/restore, handover                                                                                     | Another operator deploys/restores, customer signs off, developer access removed           |
 
 ## Hardening phase now implemented
 
@@ -24,7 +24,7 @@ Retry generations fence attempts and completion even when logical configuration 
 
 ## Deployment work requiring a customer decision
 
-The Vercel web app cannot connect to the local loopback database. A working hosted app requires an approved isolated reachable backend, or the app must stay local. No tunnel, unrelated database migration or paid project is introduced. Staging and production need separate accounts/projects/secrets, regional/retention verification, approved authentication sender and a named incident owner.
+The deployed Vercel app cannot connect to a developer’s local loopback database. An isolated reachable hosted backend now exists for synthetic acceptance; the public surface and complete authenticated upload-to-export workflow have passed fictional acceptance. No tunnel, unrelated database migration or paid project is introduced. Staging and production need separate accounts/projects/secrets, regional/retention verification, approved authentication sender and a named incident owner.
 
 Before real CV activation, implement and exercise the customer-approved retention/hold lifecycle across originals, text, outputs, exports and backups. The current retention field records policy; it is not an automatic purge scheduler. A lawful hold workflow, independently tested restore and hosted monitoring/alerts remain deployment work. An automatic purge must not be invented before the customer defines holds, scope and retention.
 
