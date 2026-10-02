@@ -58,7 +58,8 @@ export async function GET(req: NextRequest) {
           req.nextUrl.searchParams.get("reveal") === "true",
         ),
         role: access.role,
-        mode: access.local ? "Local synthetic" : "Supabase synthetic",
+        temporaryPublic: access.temporaryPublic ?? false,
+        mode: access.temporaryPublic ? "Temporary public synthetic" : access.local ? "Local synthetic" : "Supabase synthetic",
         capabilities: {
           uploads: !access.local && !!process.env.PARSER_SNAPSHOT_ID,
           ai: process.env.AI_ENABLED === "true" && !!process.env.OPENAI_API_KEY,
@@ -89,7 +90,8 @@ export async function POST(req: NextRequest) {
       {
         ...publicState(state),
         role: access.role,
-        mode: access.local ? "Local synthetic" : "Supabase synthetic",
+        temporaryPublic: access.temporaryPublic ?? false,
+        mode: access.temporaryPublic ? "Temporary public synthetic" : access.local ? "Local synthetic" : "Supabase synthetic",
         capabilities: {
           uploads: !access.local && !!process.env.PARSER_SNAPSHOT_ID,
           ai: process.env.AI_ENABLED === "true" && !!process.env.OPENAI_API_KEY,

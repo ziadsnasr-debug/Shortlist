@@ -4,6 +4,8 @@ import type { Owner } from "./store";
 import { WorkflowError } from "./workflow";
 import { pagedRows } from "./recovery-export";
 export function administrator(access: Owner) {
+  if (access.temporaryPublic)
+    throw new WorkflowError("Account administration is unavailable during temporary public access.", 403);
   if (access.local)
     throw new WorkflowError("Administration requires Supabase staging.", 503);
   if (access.role !== "administrator")
