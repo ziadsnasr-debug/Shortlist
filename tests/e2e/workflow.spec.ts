@@ -36,11 +36,20 @@ test("complete synthetic batch, tie gate, immutable export", async ({
   }
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   for (let i = 0; i < 6; i++) {
-    await expect(
-      page.getByText(`Candidate 0${i + 1}`, { exact: true }).first(),
-    ).toBeVisible();
+    // The CV list always shows every label; wait for the form itself.
+    await expect(page.locator(".review-identity h3")).toHaveText(
+      `Candidate 0${i + 1}`,
+    );
     if (i === 1) {
-      await page.getByLabel("Evidence category").nth(3).selectOption("FULL");
+      const row = page.locator("article.assessment").nth(3);
+      const change = row.getByRole("button", {
+        name: "Change this judgement",
+      });
+      if (await change.count()) await change.click();
+      await row
+        .getByRole("group", { name: "Evidence category" })
+        .getByRole("radio", { name: /Full evidence/ })
+        .check();
       await page
         .getByLabel("Review reason (required)")
         .fill("Source describes direct CRM use and renewal responsibilities.");
