@@ -33,3 +33,5 @@ See docs/status.md for stage exits; docs/deployment.md for fresh accounts/enviro
 Local tests do not establish hosted isolation, model accuracy, human usefulness or customer acceptance. These external gates remain required before real CVs.
 
 Backend priorities and remaining exit gates: docs/backend-plan.md. Static private configuration preflight is available through scripts/preflight.ts (`--check`); keys are never included in its output.
+
+Developer-only Jev comparison: docs/jev-evaluation.md. The active evidence provider remains OpenAI; the experiment never switches deployment configuration.
