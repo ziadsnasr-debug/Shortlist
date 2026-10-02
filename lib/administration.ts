@@ -2,6 +2,11 @@ import "server-only";
 import { databaseClient } from "./supabase";
 import type { Owner } from "./store";
 import { WorkflowError } from "./workflow";
+import { configuration } from "./config";
+import {
+  currentUtcAllowancePeriod,
+  makeProcessingAllowance,
+} from "./processing-allowance";
 import { pagedRows } from "./recovery-export";
 import {
   ageSeconds,
@@ -21,7 +26,8 @@ export function administrator(access: Owner) {
 export async function administration(access: Owner) {
   administrator(access);
   const db = databaseClient();
-  const [members, { data: workspace, error: we }, documents, deletions] =
+  const period = currentUtcAllowancePeriod();
+  const [members, { data: workspace, error: we }, documents, deletions, allowance] =
     await Promise.all([
       pagedRows(
         db,
@@ -49,8 +55,15 @@ export async function administration(access: Owner) {
         "id",
         "id,entity_id,ready_after,completed_at",
       ),
+      db
+        .from("processing_allowances")
+        .select("period,used")
+        .eq("workspace_id", access.workspaceId)
+        .eq("period", period)
+        .maybeSingle(),
     ]);
   if (we) throw new Error("ADMIN_UNAVAILABLE");
+  if (allowance.error) throw new Error("ADMIN_UNAVAILABLE");
   const operationDocuments = documents.map((document) => ({
     ...document,
     stage: documentStage(document),
@@ -63,5 +76,10 @@ export async function administration(access: Owner) {
     documents: operationDocuments,
     deletions,
     processing: operationSummary(operationDocuments),
+    allowance: makeProcessingAllowance({
+      period,
+      used: allowance.data ? allowance.data.used : 0,
+      limit: configuration().allowance,
+    }),
   };
 }

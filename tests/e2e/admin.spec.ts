@@ -6,7 +6,16 @@ const adminId = "3f9a1c2e-0000-4000-8000-000000000001";
 const reviewerId = "7b2d4e6f-0000-4000-8000-000000000002";
 const removedId = "c81e5a90-0000-4000-8000-000000000003";
 
-function payload(paused: boolean) {
+function payload(
+  paused: boolean,
+  allowance?: {
+    period: string;
+    used: number;
+    limit: number;
+    remaining: number;
+    state: "normal" | "near_limit" | "exhausted";
+  },
+) {
   return {
     settings: { paused, retentionDays: 90, incidentOwner: "Operations lead" },
     members: [
@@ -38,6 +47,7 @@ function payload(paused: boolean) {
       { id: "e1", completed_at: null },
       { id: "e2", completed_at: "2026-10-01T10:00:00Z" },
     ],
+    ...(allowance ? { allowance } : {}),
   };
 }
 
@@ -179,6 +189,55 @@ test("processing is available when not paused and the tab shows an empty state",
   await expect(page.getByText(/No documents are waiting/)).toBeVisible();
 });
 
+test("shows the monthly allowance state and does not invent usage for legacy data", async ({
+  page,
+}) => {
+  await page.route("**/api/administration", (route) =>
+    route.fulfill({
+      json: payload(false, {
+        period: "2026-10-01",
+        used: 80,
+        limit: 100,
+        remaining: 20,
+        state: "near_limit",
+      }),
+    }),
+  );
+  await page.goto("/admin");
+  await page.getByRole("tab", { name: "Processing" }).click();
+  await expect(page.getByRole("heading", { name: "Monthly processing allowance" })).toBeVisible();
+  await expect(page.getByText("This workspace is nearing its monthly processing allowance.")).toBeVisible();
+  await expect(page.getByText("2026-10-01")).toBeVisible();
+  expect(await axe(page)).toEqual([]);
+
+  await page.route("**/api/administration", (route) =>
+    route.fulfill({ json: payload(false) }),
+  );
+  await page.reload();
+  await page.getByRole("tab", { name: "Processing" }).click();
+  await expect(page.getByText("Monthly allowance usage is unavailable.")).toBeVisible();
+  expect(await axe(page)).toEqual([]);
+});
+
+test("shows an exhausted allowance without implying spend", async ({ page }) => {
+  await page.route("**/api/administration", (route) =>
+    route.fulfill({
+      json: payload(false, {
+        period: "2026-10-01",
+        used: 120,
+        limit: 100,
+        remaining: 0,
+        state: "exhausted",
+      }),
+    }),
+  );
+  await page.goto("/admin");
+  await page.getByRole("tab", { name: "Processing" }).click();
+  await expect(page.getByText("This workspace has used its monthly processing allowance.")).toBeVisible();
+  await expect(page.getByText(/not a completed-CV count or spend/)).toBeVisible();
+  expect(await axe(page)).toEqual([]);
+});
+
 test("every administration tab fits a phone without sideways scrolling", async ({
   page,
 }) => {
@@ -192,5 +251,11 @@ test("every administration tab fits a phone without sideways scrolling", async (
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    expect(await axe(page), `${tab} (phone)`).toEqual([]);
+    if (tab === "Processing") {
+      await page.getByRole("button", { name: "Refresh status" }).focus();
+      await page.keyboard.press("Tab");
+      await expect(page.getByRole("table").locator("..")).toBeFocused();
+    }
   }
 });

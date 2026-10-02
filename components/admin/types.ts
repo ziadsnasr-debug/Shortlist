@@ -21,6 +21,15 @@ export type ProcessingSummary = {
   attention: number;
 };
 
+export type ProcessingAllowance = {
+  period: string;
+  used: number;
+  limit: number;
+  remaining: number;
+  state: "normal" | "near_limit" | "exhausted";
+  capturedAt?: string;
+};
+
 export type Admin = {
   settings: {
     paused: boolean;
@@ -36,6 +45,8 @@ export type Admin = {
     completed_at: string | null;
   }[];
   processing?: ProcessingSummary;
+  /** Omitted by older API responses; the UI must show unavailable, never zero. */
+  allowance?: ProcessingAllowance;
 };
 
 /** Sends an administration action. Resolves true when the server accepted it. */
