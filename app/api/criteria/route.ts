@@ -50,7 +50,10 @@ export async function POST(req: NextRequest) {
     if (budget) throw new WorkflowError("Processing allowance exhausted.", 429);
     await requireProcessing(access.workspaceId);
     return NextResponse.json(
-      { rubric: await draftCriteria(vacancy.description, vacancy.title), published: false },
+      {
+        rubric: await draftCriteria(vacancy.description, vacancy.title),
+        published: false,
+      },
       { headers: privateHeaders },
     );
   } catch (e) {
