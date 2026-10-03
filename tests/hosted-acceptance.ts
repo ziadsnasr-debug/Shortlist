@@ -96,8 +96,12 @@ await writeFile(
 );
 const publicPilot = process.env.HOSTED_EXPECT_TEMPORARY_PUBLIC === "true";
 const publicExpiry = Date.parse(process.env.TEMP_PUBLIC_ACCESS_UNTIL ?? "");
-if (publicPilot && (process.env.TEMP_PUBLIC_ACCESS !== "true" ||
-    !Number.isFinite(publicExpiry) || publicExpiry <= Date.now()))
+if (
+  publicPilot &&
+  (process.env.TEMP_PUBLIC_ACCESS !== "true" ||
+    !Number.isFinite(publicExpiry) ||
+    publicExpiry <= Date.now())
+)
   throw new Error("Active temporary public pilot configuration required.");
 try {
   const created = await db.auth.admin.createUser({
@@ -184,10 +188,14 @@ try {
     expect(privateReadiness.status()).toBe(403);
     for (const path of ["/api/administration", "/api/retention"])
       expect((await context.request.get(origin + path)).status()).toBe(403);
-    console.log("Temporary fictional public pilot: administration denied; browser MFA not assessed.");
+    console.log(
+      "Temporary fictional public pilot: administration denied; browser MFA not assessed.",
+    );
   } else {
     expect(privateReadiness.status()).toBe(200);
-    expect(privateReadiness.headers()["cache-control"]).toBe("private, no-store");
+    expect(privateReadiness.headers()["cache-control"]).toBe(
+      "private, no-store",
+    );
     const readiness = await privateReadiness.json();
     expect(Object.keys(readiness).sort()).toEqual(["checks", "status"]);
     expect(readiness.status).toBe("configuration_ready");
@@ -368,7 +376,7 @@ try {
     .click();
   await page
     .getByLabel("Selection reason (required, including an empty shortlist)")
-    .fill("Both fictional applications have complete reviewed evidence.");
+    .fill("=1+1"); // Harmless formula-shaped fixture: export must keep it inert.
   await page
     .getByRole("button", { name: "Finalise shortlist", exact: true })
     .click();
@@ -391,6 +399,9 @@ try {
   expect(exportResponse.headers()["content-disposition"]).toContain(
     "attachment",
   );
+  const csv = await exportResponse.text();
+  expect(csv).toContain('"\'=1+1"');
+  await writeFile("work/hosted-export.csv", csv, { mode: 0o600 });
   expect(consoleErrors).toEqual([]);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(origin + "/vacancies");
@@ -407,6 +418,118 @@ try {
   console.log(
     `PASS: hosted ${publicPilot ? "temporary fictional public access (browser MFA not assessed)" : "real MFA login"}, browser PDF/DOCX uploads, managed parser/queue, six source blocks each, hidden ranking/scores, manual full-evidence review, two scores of 100, immutable finalisation/export/reload, Axe review and 390px bounds. Provider configuration is recorded in private assessment runs; no real CV used.`,
   );
+  if (process.env.HOSTED_INCLUDE_MANUAL_FAILURE === "true") {
+    stage = "image-only-readable-copy";
+    const imagePage = await context.newPage();
+    await imagePage.setViewportSize({ width: 600, height: 800 });
+    await imagePage.setContent(
+      `<html><body><pre style="white-space:pre-wrap;font:16px sans-serif">${passages.join("\n\n")}</pre></body></html>`,
+    );
+    const raster = await imagePage.screenshot();
+    await imagePage.close();
+    const scanned = await PDFDocument.create();
+    const scanImage = await scanned.embedPng(raster);
+    scanned
+      .addPage([600, 800])
+      .drawImage(scanImage, { x: 0, y: 0, width: 600, height: 800 });
+    await writeFile(
+      "work/live-fixtures/fictional-image-only.pdf",
+      await scanned.save(),
+    );
+    const manualTitle = "Fictional manual acceptance " + Date.now();
+    const created = await action({
+      type: "create",
+      title: manualTitle,
+      team: "Fictional QA",
+      description: "Image-only fictional fixture with checked manual handling.",
+    });
+    const mv = created.vacancies.at(-1)!;
+    const mb = { vacancyId: mv.id, batchId: mv.batches[0].id };
+    testVacancyId = mv.id;
+    await action({ ...mb, type: "rubric", rubric: sampleRubric });
+    await action({ ...mb, type: "publish" });
+    await page.goto(origin + "/vacancies");
+    await page
+      .locator(".vacancy-row")
+      .filter({ hasText: manualTitle })
+      .getByRole("link", { name: new RegExp(` for ${manualTitle}$`) })
+      .click();
+    await page
+      .getByLabel("I confirm these files contain fictional data only.")
+      .check();
+    await page
+      .getByLabel("Choose fictional CV")
+      .setInputFiles("work/live-fixtures/fictional-image-only.pdf");
+    await expect
+      .poll(
+        async () =>
+          (await state()).vacancies.find((x) => x.id === mv.id)!.batches[0]
+            .applications.length,
+        { timeout: 30000 },
+      )
+      .toBe(1);
+    const manualApp = (await state()).vacancies.find((x) => x.id === mv.id)!
+      .batches[0].applications[0];
+    testApplications.push(manualApp.id);
+    await expect
+      .poll(
+        async () =>
+          (await state()).vacancies.find((x) => x.id === mv.id)!.batches[0]
+            .applications[0].state,
+        { timeout: 150000, intervals: [2000, 4000, 6000] },
+      )
+      .toBe("readable_copy");
+    const before = await state();
+    const blocked = await page.request.post(origin + "/api/workspace", {
+      headers: { origin },
+      data: { version: before.version, action: { ...mb, type: "close" } },
+    });
+    expect(blocked.status()).toBe(422);
+    expect(
+      before.vacancies.find((x) => x.id === mv.id)!.batches[0].ranking,
+    ).toBeNull();
+    await page.reload();
+    await page
+      .getByRole("button", { name: "Transcribe passages", exact: true })
+      .click();
+    await page
+      .getByLabel("Fictional candidate name (kept hidden during review)")
+      .fill("Fictional Manual Fixture");
+    await page
+      .getByLabel("Page or paragraph in the original")
+      .fill("Page 1 image");
+    await page.getByLabel("Relevant transcription").fill(passages.join("\n"));
+    await page
+      .getByLabel("Reason for manual handling")
+      .fill(
+        "Image-only fictional PDF; the generated page contains these exact passages.",
+      );
+    await page
+      .getByLabel("I checked these passages against the original document.")
+      .check();
+    await page
+      .getByRole("button", { name: "Save checked passages", exact: true })
+      .click();
+    await expect
+      .poll(
+        async () =>
+          (await state()).vacancies.find((x) => x.id === mv.id)!.batches[0]
+            .applications[0].state,
+      )
+      .toBe("ready");
+    const checked = (await state()).vacancies.find((x) => x.id === mv.id)!
+      .batches[0].applications[0];
+    expect(checked.blocks).toHaveLength(1);
+    expect(checked.blocks[0].inputMethod).toBe("manual");
+    expect(
+      Object.values(checked.assessments).every((a) => a.category === "UNCLEAR"),
+    ).toBe(true);
+    expect(checked.confirmed).toBe(false);
+    expect(checked.score).toBeNull();
+    console.log(
+      "PASS: hosted image-only PDF requests readable copy, blocks intake closure/ranking, and checked browser transcription stays unconfirmed/UNCLEAR with manual provenance.",
+    );
+  }
 } catch {
   if (diagnostics.length)
     console.log("Hosted browser diagnostics:", diagnostics.join(","));
