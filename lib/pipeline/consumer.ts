@@ -63,9 +63,8 @@ export async function consumeDocuments(deadline = Date.now() + 220000) {
     if (signal.aborted) break;
     if (workspaceError || !w) continue;
     const state = w.payload as Workspace;
-    const batch = state.vacancies
-        .find((v) => v.id === d.vacancy_key)
-        ?.batches.find((b) => b.id === d.batch_key),
+    const vacancy = state.vacancies.find((v) => v.id === d.vacancy_key),
+      batch = vacancy?.batches.find((b) => b.id === d.batch_key),
       app = batch?.applications.find((a) => a.id === d.application_key);
     if (
       !batch ||
@@ -172,6 +171,7 @@ export async function consumeDocuments(deadline = Date.now() + 220000) {
                   throw new Error("PROCESSING_PAUSED");
               },
               signal,
+              vacancy?.title,
             )
           : { assessments: {}, outputs: [], usage: [] };
       signal.throwIfAborted();

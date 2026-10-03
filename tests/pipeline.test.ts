@@ -54,6 +54,37 @@ it("performs exactly two fresh bounded calls with no tools, scores, other CVs or
   expect(result.assessments[sampleRubric[0].id].category).toBe("PARTIAL");
   expect(result).not.toHaveProperty("score");
 });
+it("sends only the approved criteria definitions and the vacancy title", async () => {
+  enable();
+  const a = app();
+  mock.generate.mockResolvedValue({ output: { criteria: [] }, usage: {} });
+  const rubric = sampleRubric.map((c, i) =>
+    i === 0 ? { ...c, equivalents: "Ran a customer community" } : c,
+  );
+  await assess(a, rubric, undefined, undefined, "Customer success manager");
+  const [first, second] = mock.generate.mock.calls.map((c) => c[0]);
+  expect(first.prompt).toBe(second.prompt);
+  const sent = JSON.parse(first.prompt);
+  expect(sent.vacancyTitle).toBe("Customer success manager");
+  expect(Object.keys(sent).sort()).toEqual([
+    "approvedCriteria",
+    "untrustedSource",
+    "vacancyTitle",
+  ]);
+  expect(sent.approvedCriteria[0]).toEqual({
+    id: rubric[0].id,
+    section: rubric[0].section,
+    title: rubric[0].title,
+    full: rubric[0].full,
+    partial: rubric[0].partial,
+    equivalents: "Ran a customer community",
+  });
+  expect(sent.approvedCriteria[1]).not.toHaveProperty("equivalents");
+  expect(first.prompt).not.toContain("essential");
+  expect(first.prompt).not.toContain("points");
+  expect(first.prompt).not.toContain("Morgan Ellis");
+  expect(first.system).toContain("untrusted data");
+});
 it("hostile model output and a failed second call remain unresolved", async () => {
   enable();
   mock.generate
@@ -84,12 +115,29 @@ it("does not start a second model pass after the shared processing signal expire
     controller.abort(new DOMException("Deadline exceeded", "TimeoutError"));
     return { output: { criteria: [] }, usage: {} };
   });
-  await expect(assess(app(), sampleRubric, undefined, controller.signal)).rejects.toMatchObject({
+  await expect(
+    assess(app(), sampleRubric, undefined, controller.signal),
+  ).rejects.toMatchObject({
     name: "TimeoutError",
   });
   expect(mock.generate).toHaveBeenCalledTimes(1);
 });
-it("AI criteria cannot silently publish invalid weights", async () => {
+const draftOf = (
+  count: number,
+  over: Partial<{ title: string; points: number; equivalents: string }> = {},
+) => ({
+  criteria: Array.from({ length: count }, (_, i) => ({
+    section: "Skills",
+    title: `Requirement ${i + 1}`,
+    points: 1,
+    essential: false,
+    full: "Full evidence.",
+    partial: "Partial evidence.",
+    equivalents: "",
+    ...over,
+  })),
+});
+it("AI criteria are normalised to 100 points before they reach the recruiter", async () => {
   enable();
   mock.generate.mockResolvedValue({
     output: {
@@ -100,11 +148,51 @@ it("AI criteria cannot silently publish invalid weights", async () => {
         essential: c.essential,
         full: c.full,
         partial: c.partial,
+        equivalents: "",
       })),
     },
     usage: {},
   });
-  await expect(draftCriteria("Fictional role")).rejects.toThrow("100 points");
+  const rubric = await draftCriteria("Fictional role", "Customer success");
+  expect(rubric.reduce((n, c) => n + c.points, 0)).toBe(100);
+  expect(rubric.map((c) => c.id)).toEqual(
+    sampleRubric.map((_, i) => `c${i + 1}`),
+  );
+});
+it("drafting sends the title as untrusted data and drops empty equivalents", async () => {
+  enable();
+  mock.generate.mockResolvedValue({
+    output: {
+      criteria: [
+        ...draftOf(1).criteria,
+        ...draftOf(1, { equivalents: " Ran a user group " }).criteria,
+      ],
+    },
+    usage: {},
+  });
+  const rubric = await draftCriteria(
+    "Fictional description",
+    "Fictional title",
+  );
+  const call = mock.generate.mock.calls[0][0];
+  expect(JSON.parse(call.prompt)).toEqual({
+    untrustedJobTitle: "Fictional title",
+    untrustedJobDescription: "Fictional description",
+  });
+  expect(call.providerOptions.openai).toEqual({
+    store: false,
+    reasoningEffort: "medium",
+    strictJsonSchema: true,
+  });
+  expect(rubric[0]).not.toHaveProperty("equivalents");
+  expect(rubric[1].equivalents).toBe("Ran a user group");
+});
+it("other invalid AI criteria still reject", async () => {
+  enable();
+  for (const output of [draftOf(13), draftOf(2, { title: "" })]) {
+    mock.generate.mockResolvedValueOnce({ output, usage: {} });
+    await expect(draftCriteria("Fictional role", "Title")).rejects.toThrow();
+  }
 });
 it("denied network, empty sandbox env and cleanup hold on malformed output", async () => {
   process.env.PARSER_SNAPSHOT_ID = "synthetic-snapshot";
@@ -146,7 +234,8 @@ it("cancels sandbox work while using a fresh signal for cleanup", async () => {
   mock.create.mockResolvedValue({
     runCommand: vi.fn().mockResolvedValue({
       exitCode: 0,
-      stdout: async () => process.env.PARSER_BUNDLE_SHA256 + "  /opt/shortlist/runner.mjs",
+      stdout: async () =>
+        process.env.PARSER_BUNDLE_SHA256 + "  /opt/shortlist/runner.mjs",
     }),
     writeFiles: async () => {
       controller.abort(new DOMException("Deadline exceeded", "TimeoutError"));
@@ -154,8 +243,9 @@ it("cancels sandbox work while using a fresh signal for cleanup", async () => {
     },
     stop,
   });
-  await expect(parseInSandbox(Buffer.from("%PDF-1.7"), controller.signal))
-    .rejects.toMatchObject({ name: "TimeoutError" });
+  await expect(
+    parseInSandbox(Buffer.from("%PDF-1.7"), controller.signal),
+  ).rejects.toMatchObject({ name: "TimeoutError" });
   expect(mock.create.mock.calls[0][0].signal).toBe(controller.signal);
   expect(stop).toHaveBeenCalledTimes(1);
   expect(stop.mock.calls[0][0].signal.aborted).toBe(false);

@@ -34,7 +34,13 @@ for (const fixture of benchmarkCases) {
       usage: { inputTokens?: number; outputTokens?: number }[] = [],
       raw: unknown[] = [];
     if (provider === "openai") {
-      const response = await assess(fixture.app, fixture.rubric);
+      const response = await assess(
+        fixture.app,
+        fixture.rubric,
+        undefined,
+        undefined,
+        "Accounts assistant",
+      );
       outputs = response.outputs;
       usage = response.usage.map((item) =>
         z

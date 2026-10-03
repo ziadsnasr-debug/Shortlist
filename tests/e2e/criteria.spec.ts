@@ -413,6 +413,35 @@ test("evidence definitions expand inline", async ({ page }) => {
   );
 });
 
+test("equivalent evidence saves and reloads", async ({ page }) => {
+  await open(page);
+  await page
+    .getByRole("button", { name: "Evidence definitions" })
+    .first()
+    .click();
+  const field = page.getByLabel("Also accept (equivalent evidence)");
+  await expect(field).toHaveValue("");
+  await expect(field).toHaveAttribute("maxlength", "500");
+  await field.fill("Ran a customer community or user group");
+  await page
+    .getByRole("button", { name: "Save criteria draft", exact: true })
+    .click();
+  await expect(
+    page.getByText("Criteria draft saved", { exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Set the criteria" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Evidence definitions" })
+    .first()
+    .click();
+  await expect(
+    page.getByLabel("Also accept (equivalent evidence)"),
+  ).toHaveValue("Ran a customer community or user group");
+});
+
 test("AI drafting shows placeholders, then marks drafted rows until edited", async ({
   page,
 }) => {

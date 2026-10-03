@@ -15,6 +15,7 @@ export type Criterion = {
   essential: boolean;
   full: string;
   partial: string;
+  equivalents?: string;
 };
 export type Block = {
   id: string;
