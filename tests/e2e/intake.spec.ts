@@ -62,6 +62,17 @@ test("dispositions are recorded inline and leave the count", async ({
     .click();
   await expect(row.getByText("Disposition recorded")).toBeVisible();
   await expect(page.getByText("5 of 5 ready")).toBeVisible();
+  // The removed row recedes without dropping its text below AA contrast.
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme });
+    await page.evaluate(() =>
+      Promise.all(document.getAnimations().map((a) => a.finished)),
+    );
+    const { violations } = await new AxeBuilder({ page })
+      .include(".file-list")
+      .analyze();
+    expect(violations).toEqual([]);
+  }
 });
 
 test("processing demo walks the real stages and settles on an honest result", async ({

@@ -1662,8 +1662,13 @@ file rows and the reading glyph. */
 .file-form > p {
   font-size: 13px;
 }
-.stage-disposed .file-main {
-  opacity: 0.7;
+/* Removed files recede through the glyph and a muted label only; dimming the
+   whole row dropped its text below 4.5:1. */
+.stage-disposed .file-main > svg {
+  opacity: 0.5;
+}
+.stage-disposed .file-text strong {
+  color: var(--muted-foreground);
 }
 .empty-glyph {
   width: 40px;
