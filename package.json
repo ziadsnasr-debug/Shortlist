@@ -31,6 +31,7 @@
     "preflight": "tsx scripts/preflight.ts --check",
     "test:recovery": "tsx tests/recovery-integration.ts",
     "benchmark:jev": "node --conditions=react-server --import tsx scripts/benchmark/run.ts",
+    "benchmark:criteria": "node --conditions=react-server --import tsx scripts/benchmark/criteria/run.ts",
     "test:hosted": "tsx tests/hosted-acceptance.ts"
   },
   "keywords": [],
