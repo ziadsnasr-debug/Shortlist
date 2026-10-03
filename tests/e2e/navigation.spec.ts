@@ -213,3 +213,80 @@ test("the first screen arrives with data once the workspace cookie exists", asyn
   const headers = (await page.request.get("/vacancies")).headers();
   expect(headers["cache-control"]).toMatch(/no-store|private/);
 });
+
+test("finalised vacancies collapse below open work", async ({ page }) => {
+  await page.goto("/vacancies");
+  await page.evaluate(async () => {
+    const post = async (action: object) => {
+      const s = await (await fetch("/api/workspace")).json();
+      const r = await fetch("/api/workspace", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ version: s.version, action }),
+      });
+      return r.json();
+    };
+    const ids = { vacancyId: "customer-success", batchId: "first-batch" };
+    await post({ type: "publish", ...ids });
+    await post({ type: "samples", ...ids });
+    let state = await post({ type: "close", ...ids });
+    for (const app of state.vacancies[0].batches[0].applications) {
+      const decisions = Object.fromEntries(
+        Object.entries(
+          app.assessments as Record<
+            string,
+            { category: string; evidence: string[] }
+          >,
+        ).map(([id, a]) => [
+          id,
+          {
+            category: a.category === "UNCLEAR" ? "PARTIAL" : a.category,
+            evidence: a.evidence,
+            checked: true,
+            reason: "Checked against the fictional source.",
+          },
+        ]),
+      );
+      state = await post({
+        type: "review",
+        ...ids,
+        applicationId: app.id,
+        runId: app.runId,
+        documentVersion: app.documentVersion,
+        decisions,
+        sourceChecked: true,
+        confirm: true,
+        attest: true,
+      });
+    }
+    await post({
+      type: "selection",
+      ...ids,
+      selected: [],
+      reason: "Fictional exercise, nobody selected.",
+      tieReason: "",
+      exceptions: {},
+    });
+    await post({ type: "finalise", ...ids });
+    await post({
+      type: "create",
+      title: "Support analyst",
+      team: "Operations",
+      description: "Fictional role for grouping.",
+    });
+  });
+  await page.reload();
+  const sidebar = page.getByRole("navigation", { name: "Your vacancies" });
+  await expect(
+    sidebar.getByRole("link", { name: "Support analyst" }),
+  ).toBeVisible();
+  const group = sidebar.locator("details.side-finalised");
+  await expect(group).not.toHaveAttribute("open", "");
+  await expect(group.locator("summary")).toContainText("Finalised (1)");
+  await expect(
+    page
+      .getByRole("list", { name: "Finalised vacancies" })
+      .getByText("Customer success manager"),
+  ).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
