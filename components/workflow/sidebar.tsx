@@ -80,6 +80,34 @@ function SidebarNav({
     if (moved) onNavigate?.();
     return moved;
   };
+  // Finished vacancies collapse so open work stays in view as history grows.
+  const open = vacancies.filter((v) => !v.batches.at(-1)!.snapshot);
+  const finalised = vacancies.filter((v) => !!v.batches.at(-1)!.snapshot);
+  const item = (v: PublicVacancy) => {
+    const b = v.batches.at(-1)!;
+    const s = batchSummary(b);
+    const current = route.view === "batch" && route.vacancyId === v.id;
+    return (
+      <li key={v.id}>
+        <NavLink
+          href={pathFor({
+            view: "batch",
+            vacancyId: v.id,
+            batchId: b.id,
+            step: defaultStep(b),
+          })}
+          navigate={go}
+          aria-current={current ? "page" : undefined}
+          className={current ? "current" : ""}
+        >
+          <ProgressRing value={s.done.filter(Boolean).length / s.done.length} />
+          <span className="side-label" title={v.title}>
+            {v.title}
+          </span>
+        </NavLink>
+      </li>
+    );
+  };
   return (
     <>
       <button
@@ -117,36 +145,21 @@ function SidebarNav({
       {vacancies.length > 0 && (
         <nav aria-label="Your vacancies" className="side-roles">
           <h2>Your vacancies</h2>
-          <ul>
-            {vacancies.map((v) => {
-              const b = v.batches.at(-1)!;
-              const s = batchSummary(b);
-              const current =
-                route.view === "batch" && route.vacancyId === v.id;
-              return (
-                <li key={v.id}>
-                  <NavLink
-                    href={pathFor({
-                      view: "batch",
-                      vacancyId: v.id,
-                      batchId: b.id,
-                      step: defaultStep(b),
-                    })}
-                    navigate={go}
-                    aria-current={current ? "page" : undefined}
-                    className={current ? "current" : ""}
-                  >
-                    <ProgressRing
-                      value={s.done.filter(Boolean).length / s.done.length}
-                    />
-                    <span className="side-label" title={v.title}>
-                      {v.title}
-                    </span>
-                  </NavLink>
-                </li>
-              );
-            })}
-          </ul>
+          {open.length > 0 && <ul>{open.map(item)}</ul>}
+          {finalised.length > 0 && (
+            <details
+              className="side-finalised"
+              open={finalised.some(
+                (v) => route.view === "batch" && route.vacancyId === v.id,
+              )}
+            >
+              <summary>
+                Finalised{" "}
+                <span className="tabular-nums">({finalised.length})</span>
+              </summary>
+              <ul>{finalised.map(item)}</ul>
+            </details>
+          )}
         </nav>
       )}
     </>

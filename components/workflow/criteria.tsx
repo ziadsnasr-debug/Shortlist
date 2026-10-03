@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NativeSelect } from "@/components/ui/native-select";
 import { type Criterion } from "@/lib/workflow";
 import { WeightChart } from "../workspace-insights";
 import { sampleRubric } from "@/fixtures/synthetic/seed";
@@ -439,7 +440,7 @@ export function Criteria({
             </section>
           ))
         )}
-      {!drafting && !rubric.length && (
+        {!drafting && !rubric.length && (
           <p className="text-sm text-muted-foreground">
             No criteria yet. Add one, or start from the editable examples.
           </p>
@@ -447,15 +448,15 @@ export function Criteria({
       </div>
       {editable && (
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <label className="grid gap-1 text-sm" htmlFor="role-template">
+          <label className="grid w-64 gap-1.5 text-sm" htmlFor="role-template">
             <span className="font-medium">Start from a role template</span>
-            <select
+            <NativeSelect
               id="role-template"
-              className="h-10 rounded-md border border-input bg-background px-3"
               defaultValue=""
               disabled={busy || drafting}
               onChange={(event) => {
-                const id = event.target.value as (typeof ROLE_TEMPLATES)[number]["id"];
+                const id = event.target
+                  .value as (typeof ROLE_TEMPLATES)[number]["id"];
                 if (!id) return;
                 const template = ROLE_TEMPLATES.find((item) => item.id === id)!;
                 replaceAll(
@@ -471,7 +472,7 @@ export function Criteria({
                   {template.name} · v{template.version}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </label>
           <Button
             id="add-criterion"
