@@ -16,15 +16,18 @@ const buttonVariants = cva(
   ],
   {
     variants: {
+      // Filled variants draw their edge with background colour, which forced
+      // colours removes, so they add a system-colour border there.
       variant: {
         // Graphite with a hairline highlight on top and a soft contact shadow.
         default:
-          "bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.12),0_1px_2px_rgb(0_0_0/0.16)] hover:bg-primary-hover",
+          "bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.12),0_1px_2px_rgb(0_0_0/0.16)] hover:bg-primary-hover forced-colors:border forced-colors:border-[ButtonText]",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.12),0_1px_2px_rgb(0_0_0/0.16)] hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground shadow-[inset_0_1px_0_rgb(255_255_255/0.12),0_1px_2px_rgb(0_0_0/0.16)] hover:bg-destructive/90 forced-colors:border forced-colors:border-[ButtonText]",
         outline:
           "border border-border-strong bg-card text-foreground shadow-[0_1px_2px_rgb(0_0_0/0.05)] hover:border-input/60 hover:bg-surface-2",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-muted",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-muted forced-colors:border forced-colors:border-[ButtonText]",
         ghost: "text-muted-foreground hover:bg-surface-2 hover:text-foreground",
         link: "text-foreground underline decoration-border-strong underline-offset-4 hover:decoration-foreground",
       },

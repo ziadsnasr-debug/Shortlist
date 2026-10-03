@@ -297,3 +297,22 @@ test("finalised vacancies collapse below open work", async ({ page }) => {
   ).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
+
+test("forced colours keep edges on filled buttons and surfaces", async ({
+  page,
+}) => {
+  await page.emulateMedia({ forcedColors: "active" });
+  await page.goto("/vacancies");
+  const edge = (selector: string, side = "top") =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate(
+        (e, s) => getComputedStyle(e).getPropertyValue(`border-${s}-width`),
+        side,
+      );
+  expect(await edge(".sidebar", "right")).toBe("1px");
+  expect(await edge(".focus-card")).toBe("1px");
+  expect(await edge(".focus-card .focus-primary")).toBe("1px");
+  expect(await edge(".pagehead a.bg-primary")).toBe("1px");
+});

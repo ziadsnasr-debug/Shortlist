@@ -3103,3 +3103,17 @@ svg.lucide {
     display: none;
   }
 }
+
+/* Forced colours drop backgrounds and shadows, so surfaces that relied on
+   them get system-colour edges. */
+@media (forced-colors: active) {
+  .sidebar {
+    border-right: 1px solid CanvasText;
+  }
+  .focus-card {
+    border: 1px solid CanvasText;
+  }
+  .focus-card .focus-primary {
+    border: 1px solid ButtonText;
+  }
+}
