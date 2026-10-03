@@ -1,17 +1,26 @@
 // Markdown tables for the benchmark write-up. Pure formatting, no I/O.
-import { ARMS } from "./arms";
-import { CATEGORIES, type Decision, type Summary } from "./metrics";
+import { ALL_ARMS } from "./arms";
+import {
+  CATEGORIES,
+  type ConfirmDecision,
+  type Decision,
+  type Summary,
+} from "./metrics";
 
 const pct = (x: number) =>
   Number.isFinite(x) ? `${(x * 100).toFixed(1)}%` : "n/a";
 
-export function markdownReport(summary: Summary, decision: Decision): string {
+export function markdownReport(
+  summary: Summary,
+  decision: Decision | null,
+  confirm: ConfirmDecision | null = null,
+): string {
   const out: string[] = [];
   const rows = Object.entries(summary.arms).flatMap(([id, arm]) =>
     (arm?.repeats ?? []).map((m) => ({
       id,
       m,
-      arm: ARMS.find((a) => a.id === id),
+      arm: ALL_ARMS.find((a) => a.id === id),
     })),
   );
   out.push(
@@ -26,11 +35,11 @@ export function markdownReport(summary: Summary, decision: Decision): string {
     "",
     "### Evidence, risk and injection",
     "",
-    "| Arm | Repeat | Pass 1 agree | Pass 2 agree | Evidence exact | Exact (FULL/PARTIAL) | Superset (FULL/PARTIAL) | Essential FULL FP | Essential FULL FN | Unsupported credit | Injection cited |",
-    "|---|---|---|---|---|---|---|---|---|---|---|",
+    "| Arm | Repeat | Pass 1 agree | Pass 2 agree | Evidence exact | Exact (FULL/PARTIAL) | Superset (FULL/PARTIAL) | Essential FULL FP | Essential FULL FN | Unsupported credit | Under-credit | Injection cited |",
+    "|---|---|---|---|---|---|---|---|---|---|---|---|",
     ...rows.map(
       ({ id, m }) =>
-        `| ${id} | ${m.repeat} | ${pct(m.perPassAgreement.pass1.rate)} | ${pct(m.perPassAgreement.pass2.rate)} | ${pct(m.evidenceExact)} | ${pct(m.evidenceExactFullPartial)} | ${pct(m.evidenceSuperset)} | ${m.essentialFalsePositives}/${m.essentialCells} | ${m.essentialFalseNegatives}/${m.essentialCells} | ${m.unsupportedCredit} (${pct(m.unsupportedCreditRate)}) | ${m.injectionCitedCells} |`,
+        `| ${id} | ${m.repeat} | ${pct(m.perPassAgreement.pass1.rate)} | ${pct(m.perPassAgreement.pass2.rate)} | ${pct(m.evidenceExact)} | ${pct(m.evidenceExactFullPartial)} | ${pct(m.evidenceSuperset)} | ${m.essentialFalsePositives}/${m.essentialCells} | ${m.essentialFalseNegatives}/${m.essentialCells} | ${m.unsupportedCredit} (${pct(m.unsupportedCreditRate)}) | ${m.underCredit} (${pct(m.underCreditRate)}) | ${m.injectionCitedCells} |`,
     ),
     "",
     "### Noise floor (between-repeat changed cells)",
@@ -53,23 +62,45 @@ export function markdownReport(summary: Summary, decision: Decision): string {
       ...CATEGORIES.map((c, i) => `| ${c} | ${m.confusion[i].join(" | ")} |`),
     );
   }
-  out.push(
-    "",
-    `### Decision: ${decision.verdict}`,
-    "",
-    "| # | Condition | Result | Detail |",
-    "|---|---|---|---|",
-    ...decision.conditions.map(
-      (c) =>
-        `| ${c.id} | ${c.text} | ${c.pass ? "pass" : "fail"} | ${c.detail} |`,
-    ),
-    "",
-    "| Metric (mean of repeats) | A | B | Delta | Reading |",
-    "|---|---|---|---|---|",
-    ...decision.comparisons.map(
-      (c) =>
-        `| ${c.metric} | ${pct(c.a)} | ${pct(c.b)} | ${Number.isFinite(c.delta) ? (c.delta * 100).toFixed(1) + " pts" : "n/a"} | ${c.verdict} |`,
-    ),
-  );
+  if (decision)
+    out.push(
+      "",
+      `### Decision: ${decision.verdict}`,
+      "",
+      "| # | Condition | Result | Detail |",
+      "|---|---|---|---|",
+      ...decision.conditions.map(
+        (c) =>
+          `| ${c.id} | ${c.text} | ${c.pass ? "pass" : "fail"} | ${c.detail} |`,
+      ),
+      "",
+      "| Metric (mean of repeats) | A | B | Delta | Reading |",
+      "|---|---|---|---|---|",
+      ...decision.comparisons.map(
+        (c) =>
+          `| ${c.metric} | ${pct(c.a)} | ${pct(c.b)} | ${Number.isFinite(c.delta) ? (c.delta * 100).toFixed(1) + " pts" : "n/a"} | ${c.verdict} |`,
+      ),
+    );
+  if (confirm)
+    out.push(
+      "",
+      `### Confirmation decision (E vs control B): ${confirm.verdict}`,
+      "",
+      "| # | Condition | Result | Detail |",
+      "|---|---|---|---|",
+      ...confirm.conditions.map(
+        (c) =>
+          `| ${c.id} | ${c.text} | ${c.pass ? "pass" : "fail"} | ${c.detail} |`,
+      ),
+      "",
+      "| Metric (mean of repeats) | B | E | Delta | Reading |",
+      "|---|---|---|---|---|",
+      ...confirm.comparisons.map(
+        (c) =>
+          `| ${c.metric} | ${pct(c.b)} | ${pct(c.e)} | ${Number.isFinite(c.delta) ? (c.delta * 100).toFixed(1) + " pts" : "n/a"} | ${c.verdict} |`,
+      ),
+      "",
+      "Arm D is reference only and does not enter the decision.",
+    );
   return out.join("\n");
 }

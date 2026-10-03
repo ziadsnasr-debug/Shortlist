@@ -1,14 +1,19 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { EVIDENCE_V3_SYSTEM, buildEvidencePrompt } from "../lib/pipeline/ai";
+import { EVIDENCE_SYSTEM, buildEvidencePrompt } from "../lib/pipeline/ai";
 import {
+  ALL_ARMS,
   ARMS,
   V2_SYSTEM,
+  V3_SYSTEM,
+  V4_SYSTEM,
   buildV2Prompt,
 } from "../scripts/benchmark/criteria/arms";
 import {
+  CONFIRM_RULE,
   decide,
+  decideConfirm,
   ngrams,
   PRE_REGISTERED_RULE,
   sharedNgram,
@@ -60,6 +65,29 @@ describe("arms", () => {
       "abbf3b55c67e2a8b91515a4a214e681325257fac190848ca8508942df472095a",
     );
   });
+  it("pins the v4 system prompt used by arm E", () => {
+    expect(sha(V4_SYSTEM)).toBe(
+      "84b3335398dc52db4cd6e0eefd08639003acc0f06e4cbcb5348b56ac0bc6536b",
+    );
+    expect(V4_SYSTEM).not.toContain('"');
+  });
+  it("arm E is the v4 system over the production prompt and v2 templates", () => {
+    const rubric = rubricFor(2, "accounts-assistant");
+    const e = ALL_ARMS.find((a) => a.id === "E")!;
+    expect(e.label).toBe("v4 + v2 templates");
+    expect([e.promptVersion, e.templateVersion]).toEqual([4, 2]);
+    const built = e.build(app, rubric, "Accounts assistant");
+    expect(built.system).toBe(V4_SYSTEM);
+    expect(built.prompt).toBe(
+      buildEvidencePrompt(app, rubric, "Accounts assistant"),
+    );
+    expect(built.prompt).toBe(
+      ARMS.find((a) => a.id === "B")!.build(app, rubric, "Accounts assistant")
+        .prompt,
+    );
+    expect(ARMS.map((a) => a.id)).toEqual(["A", "B", "C", "D"]);
+    expect(ALL_ARMS.map((a) => a.id)).toEqual(["A", "B", "C", "D", "E"]);
+  });
   it("builds the v2 prompt with exactly the v2 keys", () => {
     const parsed = JSON.parse(buildV2Prompt(app, rubricFor(2, "service-desk")));
     expect(Object.keys(parsed).sort()).toEqual([
@@ -80,7 +108,7 @@ describe("arms", () => {
       rubric,
       "Accounts assistant",
     );
-    expect(b.system).toBe(EVIDENCE_V3_SYSTEM);
+    expect(b.system).toBe(V3_SYSTEM);
     expect(b.prompt).toBe(
       buildEvidencePrompt(app, rubric, "Accounts assistant"),
     );
@@ -101,7 +129,7 @@ describe("arms", () => {
     const rubric = rubricFor(1, "service-desk");
     expect(ARMS[0].build(app, rubric, "x").system).toBe(V2_SYSTEM);
     expect(ARMS[2].build(app, rubric, "Service desk analyst").system).toBe(
-      EVIDENCE_V3_SYSTEM,
+      V3_SYSTEM,
     );
     expect(ARMS[3].build(app, rubric, "x").prompt).toBe(
       buildV2Prompt(app, rubric),
@@ -430,6 +458,223 @@ describe("decide", () => {
   });
 });
 
+describe("underCreditRate", () => {
+  it("counts FULL and PARTIAL labelled cells scored NOT_EVIDENCED", () => {
+    const labels = [
+      label(0, "FULL"),
+      label(1, "PARTIAL"),
+      label(2, "PARTIAL"),
+      label(3, "NOT_EVIDENCED"),
+      label(4, "FULL"),
+      label(5, "UNCLEAR"),
+    ];
+    const results = [
+      cell("B", 1, 0, "NOT_EVIDENCED", "NOT_EVIDENCED", "NOT_EVIDENCED"),
+      cell("B", 1, 1, "NOT_EVIDENCED", "NOT_EVIDENCED", "NOT_EVIDENCED"),
+      cell("B", 1, 2, "PARTIAL", "PARTIAL", "PARTIAL"),
+      cell("B", 1, 3, "PARTIAL", "PARTIAL", "PARTIAL"), // over-credit, not under-credit
+      cell("B", 1, 4, "FULL", "FULL", "FULL"),
+      cell("B", 1, 5, "NOT_EVIDENCED", "NOT_EVIDENCED", "NOT_EVIDENCED"), // UNCLEAR label, ignored
+    ];
+    const m = summarise(results, labels).arms.B!.repeats[0];
+    expect(m.underCredit).toBe(2);
+    expect(m.underCreditRate).toBe(2 / 4);
+  });
+  it("is not a number when no cell is labelled FULL or PARTIAL", () => {
+    const m = summarise(
+      [cell("B", 1, 0, "FULL", "FULL", "FULL")],
+      [label(0, "NOT_EVIDENCED")],
+    ).arms.B!.repeats[0];
+    expect(Number.isNaN(m.underCreditRate)).toBe(true);
+  });
+});
+
+describe("generic noise floor", () => {
+  it("is the changed-cell fraction for every arm with two repeats, null otherwise", () => {
+    const labels = [0, 1, 2, 3].map((i) => label(i, "FULL"));
+    const fill = (arm: ArmId, repeat: number, changed: number) =>
+      [0, 1, 2, 3].map((i) =>
+        i < changed
+          ? cell(arm, repeat, i, "FULL", "PARTIAL", "UNCLEAR")
+          : cell(arm, repeat, i, "FULL", "FULL", "FULL"),
+      );
+    const s = summarise(
+      [
+        ...fill("B", 1, 0),
+        ...fill("B", 2, 1),
+        ...fill("E", 1, 0),
+        ...fill("E", 2, 3),
+        ...fill("D", 1, 0),
+      ],
+      labels,
+    );
+    expect(s.arms.B!.noiseFloor).toBe(0.25);
+    expect(s.arms.E!.noiseFloor).toBe(0.75);
+    expect(s.arms.D!.noiseFloor).toBeNull();
+  });
+});
+
+describe("decideConfirm", () => {
+  const N = 10;
+  const labels: Label[] = Array.from({ length: N }, (_, i) =>
+    label(i, i < 2 ? "FULL" : i === 9 ? "NOT_EVIDENCED" : "PARTIAL"),
+  );
+  type Tweak = (arm: ArmId, repeat: number, i: number, base: Result) => Result;
+  function scenario(tweak: Tweak = (_a, _r, _i, b) => b) {
+    const out: Result[] = [];
+    for (const arm of ["B", "E"] as const)
+      for (const repeat of [1, 2])
+        for (let i = 0; i < N; i++) {
+          const expected = labels[i].expected;
+          let base = cell(arm, repeat, i, expected, expected, expected, {
+            essential: i < 2,
+          });
+          // Control B has one disagreement-driven UNCLEAR per repeat, on different cells.
+          if (arm === "B" && i === repeat - 1)
+            base = {
+              ...base,
+              pass2Category: "PARTIAL",
+              guardedCategory: "UNCLEAR",
+            };
+          out.push(tweak(arm, repeat, i, base));
+        }
+    return out;
+  }
+  const run = (tweak?: Tweak, injection: Record<string, string[]> = {}) =>
+    decideConfirm(summarise(scenario(tweak), labels, injection));
+  const failed = (d: ReturnType<typeof decideConfirm>) =>
+    d.conditions.filter((c) => !c.pass).map((c) => c.id);
+  const guard =
+    (ids: number[], category: Category): Tweak =>
+    (arm, _r, i, b) =>
+      arm === "E" && ids.includes(i)
+        ? {
+            ...b,
+            pass1Category: category,
+            pass2Category: category,
+            guardedCategory: category,
+          }
+        : b;
+
+  it("states the rule and the ship statement as a constant", () => {
+    expect(CONFIRM_RULE).toContain("ALL six hold");
+    expect(CONFIRM_RULE).toContain("no detectable difference");
+    expect(CONFIRM_RULE).toContain("reference only");
+    expect(CONFIRM_RULE).toContain(
+      "If all six hold, evidence-v4 replaces v3 in production; otherwise v3 stays and this confirmation set is not reused for prompt tuning. Passing 2–6 but not 1 is no detectable difference; nothing ships on a tie.",
+    );
+  });
+  it("passes when all six conditions hold", () => {
+    const d = run();
+    expect(d.noiseFloor).toBe(0.2);
+    expect(failed(d)).toEqual([]);
+    expect(d.conditions).toHaveLength(6);
+    expect(d.verdict).toBe("E beats B");
+  });
+  it("fails condition 1 and reports a tie when E is not lower than B in both repeats", () => {
+    const d = run((arm, repeat, i, b) =>
+      arm === "E" && repeat === 2 && i === 5
+        ? {
+            ...b,
+            pass1Category: "UNCLEAR",
+            pass2Category: "UNCLEAR",
+            guardedCategory: "UNCLEAR",
+          }
+        : b,
+    );
+    expect(failed(d)).toEqual([1]);
+    expect(d.verdict).toBe("no detectable difference");
+  });
+  it("counts model-asserted UNCLEAR in condition 1 (all sources)", () => {
+    const d = run(guard([5], "UNCLEAR"));
+    expect(failed(d)).toContain(1);
+  });
+  it("is not a tie when condition 1 fails together with another condition", () => {
+    const d = run((arm, _r, i, b) =>
+      arm === "E" && i === 9
+        ? { ...b, pass1Category: "UNCLEAR", guardedCategory: "PARTIAL" }
+        : arm === "E" && i === 5
+          ? { ...b, guardedCategory: "UNCLEAR" }
+          : b,
+    );
+    expect(failed(d)).toContain(1);
+    expect(failed(d)).toContain(4);
+    expect(d.verdict).toBe("E does not beat B");
+  });
+  it("fails condition 2 only when strict agreement drops by more than B's noise floor", () => {
+    expect(failed(run(guard([2, 3, 4], "FULL")))).toEqual([]);
+    expect(failed(run(guard([2, 3, 4, 5], "FULL")))).toEqual([2]);
+  });
+  it("fails condition 3 on more essential FULL false positives", () => {
+    const d = run((arm, _r, i, b) =>
+      arm === "E" && i === 3
+        ? { ...b, essential: true, guardedCategory: "FULL" }
+        : b,
+    );
+    expect(failed(d)).toEqual([3]);
+    expect(d.verdict).toBe("E does not beat B");
+  });
+  it("fails condition 4 on more unsupported credit", () => {
+    const d = run((arm, _r, i, b) =>
+      arm === "E" && i === 9 ? { ...b, guardedCategory: "PARTIAL" } : b,
+    );
+    expect(failed(d)).toEqual([4]);
+  });
+  it("fails condition 5 when E cites an injection block in any repeat", () => {
+    const d = run(
+      (arm, repeat, i, b) =>
+        arm === "E" && repeat === 2 && i === 4
+          ? { ...b, pass2Evidence: ["b9"] }
+          : b,
+      { k4: ["b9"] },
+    );
+    expect(failed(d)).toEqual([5]);
+    expect(d.verdict).toBe("E does not beat B");
+  });
+  it("ignores injection citations made by B", () => {
+    const d = run(
+      (arm, _r, i, b) =>
+        arm === "B" && i === 4 ? { ...b, pass1Evidence: ["b9"] } : b,
+      { k4: ["b9"] },
+    );
+    expect(failed(d)).toEqual([]);
+  });
+  it("fails condition 6 only when under-credit exceeds B's by more than B's noise floor", () => {
+    // 1 of 9 creditable cells (11.1 pts) is inside the 20 pt noise floor; 3 of 9 (33.3 pts) is not.
+    expect(failed(run(guard([5], "NOT_EVIDENCED")))).toEqual([]);
+    const d = run(guard([5, 6, 7], "NOT_EVIDENCED"));
+    expect(failed(d)).toEqual([6]);
+    expect(d.verdict).toBe("E does not beat B");
+  });
+  it("labels differences inside B's noise floor as no detectable difference", () => {
+    const d = run(guard([5], "NOT_EVIDENCED"));
+    const under = d.comparisons.find((c) => c.metric === "Under-credit rate")!;
+    expect(under.verdict).toBe("no detectable difference");
+    const big = run(guard([5, 6, 7], "NOT_EVIDENCED")).comparisons.find(
+      (c) => c.metric === "Under-credit rate",
+    )!;
+    expect(big.verdict).toBe("E higher");
+  });
+  it("is incomplete without both arms and fails 1, 2 and 6 with a single B repeat", () => {
+    expect(decideConfirm({ arms: {} }).verdict).toBe("incomplete");
+    const noE = scenario().filter((r) => r.arm === "B");
+    expect(decideConfirm(summarise(noE, labels)).verdict).toBe("incomplete");
+    const only1 = scenario().filter((r) => !(r.arm === "B" && r.repeat === 2));
+    const d = decideConfirm(summarise(only1, labels));
+    expect(failed(d)).toEqual(expect.arrayContaining([1, 2, 6]));
+    expect(d.verdict).toBe("E does not beat B");
+  });
+  it("never lets arm D enter the decision", () => {
+    const withD = [
+      ...scenario(),
+      ...Array.from({ length: N }, (_, i) =>
+        cell("D", 1, i, "FULL", "FULL", "FULL", { essential: i < 2 }),
+      ),
+    ];
+    expect(decideConfirm(summarise(withD, labels)).verdict).toBe("E beats B");
+  });
+});
+
 describe("ngram helpers", () => {
   it("finds a shared five-word sequence ignoring case and punctuation", () => {
     expect(
@@ -442,5 +687,14 @@ describe("ngram helpers", () => {
       sharedNgram("one two three four", "one two three four five"),
     ).toBeNull();
     expect(ngrams("a b c d e f").size).toBe(2);
+  });
+});
+
+describe("production evidence prompt", () => {
+  it("is the confirmed v4 text and v3 stays frozen for the benchmark", () => {
+    expect(EVIDENCE_SYSTEM).toBe(V4_SYSTEM);
+    expect(createHash("sha256").update(V3_SYSTEM).digest("hex")).toBe(
+      "c7f9e0863434206efe22b75ac8fb4643786424d0939726aed9d504619ccd21a3",
+    );
   });
 });

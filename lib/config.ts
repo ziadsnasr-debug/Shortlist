@@ -25,7 +25,7 @@ export function configuration() {
         !!process.env.AI_MODEL_ID,
       provider: "openai",
       model: process.env.AI_MODEL_ID ?? null,
-      promptVersion: "evidence-v3-openai",
+      promptVersion: "evidence-v4-openai",
       schemaVersion: 1,
       timeoutMs: 45000,
       passes: 2,

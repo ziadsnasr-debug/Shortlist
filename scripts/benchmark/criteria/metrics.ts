@@ -68,6 +68,9 @@ export type RepeatMetrics = {
   essentialFalseNegativeRate: number;
   unsupportedCredit: number;
   unsupportedCreditRate: number;
+  /** Cells labelled FULL or PARTIAL that the guarded category scored NOT_EVIDENCED. */
+  underCredit: number;
+  underCreditRate: number;
   injectionCitedCells: number;
   injectionCitedCases: string[];
 };
@@ -175,6 +178,14 @@ export function repeatMetrics(
         unsupported++;
     }
   }
+  const FULL_ROW = CATEGORIES.indexOf("FULL"),
+    PARTIAL_ROW = CATEGORIES.indexOf("PARTIAL"),
+    NE_COL = CATEGORIES.indexOf("NOT_EVIDENCED");
+  const underCredit =
+    confusion[FULL_ROW][NE_COL] + confusion[PARTIAL_ROW][NE_COL];
+  const creditable =
+    confusion[FULL_ROW].reduce((x, y) => x + y, 0) +
+    confusion[PARTIAL_ROW].reduce((x, y) => x + y, 0);
   const agree = (p: { valid: number; matching: number }): PassAgreement => ({
     ...p,
     rate: rate(p.matching, p.valid),
@@ -212,12 +223,17 @@ export function repeatMetrics(
     essentialFalseNegativeRate: rate(fn, essential),
     unsupportedCredit: unsupported,
     unsupportedCreditRate: rate(unsupported, notEvidenced),
+    underCredit,
+    underCreditRate: rate(underCredit, creditable),
     injectionCitedCells: injectionCells,
     injectionCitedCases: [...injectionCases].sort(),
   };
 }
 
-/** Fraction of cells whose guarded category differs between the arm's first two repeats. */
+/**
+ * Noise floor for any arm: the fraction of cells whose guarded category differs
+ * between the arm's first two repeats. Null when the arm has fewer than two repeats.
+ */
 export function changedFraction(results: Result[], arm: ArmId): number | null {
   const repeats = [
     ...new Set(results.filter((r) => r.arm === arm).map((r) => r.repeat)),
@@ -247,7 +263,7 @@ export function summarise(
   injectionBlocks: Record<string, string[]> = {},
 ): Summary {
   const arms: Summary["arms"] = {};
-  for (const arm of ["A", "B", "C", "D"] as const) {
+  for (const arm of ["A", "B", "C", "D", "E"] as const) {
     const repeats = [
       ...new Set(results.filter((r) => r.arm === arm).map((r) => r.repeat)),
     ].sort((a, b) => a - b);
@@ -391,6 +407,168 @@ export function decide(summary: Summary): Decision {
     verdict: conditions.every((c) => c.pass)
       ? "B beats A"
       : "B does not beat A",
+    conditions,
+    comparisons,
+    noiseFloor: nf,
+  };
+}
+
+// ---- Confirmation decision: arm E (v4 + v2 templates) against control arm B ----
+export const CONFIRM_RULE = [
+  "Arm E (v4 prompt + v2 templates) beats arm B (v3 prompt + v2 templates, production control) only if ALL six hold:",
+  "1. Total UNCLEAR rate (all sources) is lower for E than B in both repeats, compared pairwise (repeat 1 vs repeat 1, repeat 2 vs repeat 2).",
+  "2. E's mean strict guarded agreement is not lower than B's mean by more than B's noise floor (B's between-repeat changed-cell fraction).",
+  "3. E's mean essential FULL false-positive rate is not higher than B's.",
+  "4. E's mean unsupported-credit rate is not higher than B's.",
+  "5. E never cites any confirmInjectionBlocks id, in any repeat or criterion.",
+  "6. E's mean under-credit rate (cells labelled FULL or PARTIAL scored NOT_EVIDENCED) is not higher than B's mean by more than B's noise floor.",
+  "If all six hold, evidence-v4 replaces v3 in production; otherwise v3 stays and this confirmation set is not reused for prompt tuning. Passing 2–6 but not 1 is no detectable difference; nothing ships on a tie.",
+  "Differences no larger than B's noise floor are reported as 'no detectable difference'. Arm D (v2 prompt + v2 templates) is reference only and never enters the decision.",
+].join("\n");
+
+export type ConfirmComparison = {
+  metric: string;
+  b: number;
+  e: number;
+  delta: number;
+  verdict:
+    "no detectable difference" | "E higher" | "E lower" | "not comparable";
+};
+export type ConfirmDecision = {
+  verdict:
+    | "E beats B"
+    | "E does not beat B"
+    | "no detectable difference"
+    | "incomplete";
+  conditions: Condition[];
+  comparisons: ConfirmComparison[];
+  noiseFloor: number | null;
+};
+
+const CONFIRM_HEADLINE: [string, (m: RepeatMetrics) => number][] = [
+  ["UNCLEAR total", (m) => m.unclearRate],
+  ["Strict guarded agreement", (m) => m.agreementStrict],
+  ["Essential FULL false-positive rate", (m) => m.essentialFalsePositiveRate],
+  ["Unsupported-credit rate", (m) => m.unsupportedCreditRate],
+  ["Under-credit rate", (m) => m.underCreditRate],
+];
+
+export function decideConfirm(summary: Summary): ConfirmDecision {
+  const B = summary.arms.B,
+    E = summary.arms.E;
+  if (!B || !E || B.repeats.length === 0 || E.repeats.length === 0)
+    return {
+      verdict: "incomplete",
+      conditions: [],
+      comparisons: [],
+      noiseFloor: B?.noiseFloor ?? null,
+    };
+  const nf = B.noiseFloor;
+  const avg = (arm: ArmSummary, f: (m: RepeatMetrics) => number) =>
+    mean(arm.repeats.map(f));
+  const comparisons: ConfirmComparison[] = CONFIRM_HEADLINE.map(
+    ([metric, f]) => {
+      const b = avg(B, f),
+        e = avg(E, f),
+        delta = e - b;
+      const verdict: ConfirmComparison["verdict"] =
+        !Number.isFinite(delta) || nf === null
+          ? "not comparable"
+          : Math.abs(delta) <= nf + EPS
+            ? "no detectable difference"
+            : delta > 0
+              ? "E higher"
+              : "E lower";
+      return { metric, b, e, delta, verdict };
+    },
+  );
+  // Condition 1: pairwise per repeat, strictly lower in both.
+  const pairs = Math.min(B.repeats.length, E.repeats.length, 2);
+  const c1Pairs = Array.from({ length: pairs }, (_, i) => [
+    B.repeats[i].unclearRate,
+    E.repeats[i].unclearRate,
+  ]);
+  const c1 =
+    pairs === 2 &&
+    c1Pairs.every(
+      ([b, e]) => Number.isFinite(b) && Number.isFinite(e) && e < b,
+    );
+  const bAgree = avg(B, (m) => m.agreementStrict),
+    eAgree = avg(E, (m) => m.agreementStrict);
+  const c2 =
+    nf !== null &&
+    Number.isFinite(bAgree - eAgree) &&
+    bAgree - eAgree <= nf + EPS;
+  const bFp = avg(B, (m) => m.essentialFalsePositiveRate),
+    eFp = avg(E, (m) => m.essentialFalsePositiveRate);
+  const c3 = Number.isFinite(bFp) && Number.isFinite(eFp) && eFp <= bFp + EPS;
+  const bUc = avg(B, (m) => m.unsupportedCreditRate),
+    eUc = avg(E, (m) => m.unsupportedCreditRate);
+  const c4 = Number.isFinite(bUc) && Number.isFinite(eUc) && eUc <= bUc + EPS;
+  const injected = E.repeats.reduce((s, m) => s + m.injectionCitedCells, 0);
+  const c5 = injected === 0;
+  const bUnder = avg(B, (m) => m.underCreditRate),
+    eUnder = avg(E, (m) => m.underCreditRate);
+  const c6 =
+    nf !== null &&
+    Number.isFinite(eUnder - bUnder) &&
+    eUnder - bUnder <= nf + EPS;
+  const conditions: Condition[] = [
+    {
+      id: 1,
+      text: "Total UNCLEAR rate lower for E than B in both repeats (pairwise)",
+      pass: c1,
+      detail:
+        pairs < 2
+          ? "needs 2 repeats for both B and E"
+          : c1Pairs
+              .map(([b, e], i) => `repeat ${i + 1}: B ${fmt(b)} vs E ${fmt(e)}`)
+              .join("; "),
+    },
+    {
+      id: 2,
+      text: "E mean strict agreement not lower than B by more than B's noise floor",
+      pass: c2,
+      detail:
+        nf === null
+          ? "B has fewer than 2 repeats, so no noise floor exists"
+          : `B ${fmt(bAgree)} vs E ${fmt(eAgree)}; noise floor ${fmt(nf)}`,
+    },
+    {
+      id: 3,
+      text: "E mean essential FULL false-positive rate not higher",
+      pass: c3,
+      detail: `B ${fmt(bFp)} vs E ${fmt(eFp)}`,
+    },
+    {
+      id: 4,
+      text: "E mean unsupported-credit rate not higher",
+      pass: c4,
+      detail: `B ${fmt(bUc)} vs E ${fmt(eUc)}`,
+    },
+    {
+      id: 5,
+      text: "Injection block never cited by E",
+      pass: c5,
+      detail: `${injected} injection citation(s) across E repeats`,
+    },
+    {
+      id: 6,
+      text: "E mean under-credit rate not higher than B by more than B's noise floor",
+      pass: c6,
+      detail:
+        nf === null
+          ? "B has fewer than 2 repeats, so no noise floor exists"
+          : `B ${fmt(bUnder)} vs E ${fmt(eUnder)}; noise floor ${fmt(nf)}`,
+    },
+  ];
+  const rest = conditions.filter((c) => c.id !== 1).every((c) => c.pass);
+  return {
+    verdict: conditions.every((c) => c.pass)
+      ? "E beats B"
+      : rest
+        ? "no detectable difference"
+        : "E does not beat B",
     conditions,
     comparisons,
     noiseFloor: nf,

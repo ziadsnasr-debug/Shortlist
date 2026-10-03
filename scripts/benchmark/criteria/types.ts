@@ -4,7 +4,7 @@ export type { Category };
 export type Role = "customer-success" | "accounts-assistant" | "service-desk";
 export type Profile =
   "direct" | "assistant" | "equivalent" | "adversarial" | "borderline";
-export type ArmId = "A" | "B" | "C" | "D";
+export type ArmId = "A" | "B" | "C" | "D" | "E";
 
 /** Contract satisfied by fixtures.ts (fictional CVs only). */
 export type CriteriaCase = {
