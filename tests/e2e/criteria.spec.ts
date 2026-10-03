@@ -406,6 +406,11 @@ for (const scheme of ["light", "dark"] as const) {
       .first()
       .click();
     await page.getByRole("button", { name: "Add criterion" }).click();
+    expect(
+      await page
+        .getByRole("group", { name: "New criterion", exact: true })
+        .evaluate((node) => getComputedStyle(node.closest("li")!).opacity),
+    ).toBe("1");
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   });
 }

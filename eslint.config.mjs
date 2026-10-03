@@ -6,6 +6,7 @@ export default defineConfig([
   ...ts,
   globalIgnores([
     ".next/**",
+    ".claude/**",
     "work/**",
     "context/**",
     "docs/inputs/**",

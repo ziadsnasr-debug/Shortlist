@@ -51,6 +51,58 @@ export function VacanciesHome({
         }),
       };
     })();
+  const openList = vacancies.filter((v) => !v.batches.at(-1)!.snapshot);
+  const finishedList = vacancies.filter((v) => !!v.batches.at(-1)!.snapshot);
+  const row = (v: PublicVacancy) => {
+    const batch = v.batches.at(-1)!;
+    const s = batchSummary(batch);
+    const action = nextAction(batch, isAdmin);
+    const href = pathFor({
+      view: "batch",
+      vacancyId: v.id,
+      batchId: batch.id,
+      step: action.step,
+    });
+    return (
+      <li className="vacancy-row" key={v.id}>
+        <div className="vacancy-main">
+          <h2>
+            <NavLink href={href} navigate={navigate}>
+              {v.title}
+            </NavLink>
+          </h2>
+          <p>{[v.team, batch.label].filter(Boolean).join(" · ")}</p>
+        </div>
+        <div className="vacancy-progress">
+          <ol
+            className="step-strip"
+            aria-label={`Progress: ${s.done.filter(Boolean).length} of 4 steps complete`}
+          >
+            {steps.map((name, i) => (
+              <li key={name} className={s.done[i] ? "done" : ""} title={name} />
+            ))}
+          </ol>
+          <span className="tabular-nums">
+            {batch.snapshot
+              ? `Finalised · ${batch.selected.length} shortlisted`
+              : s.active.length
+                ? `${s.reviewed} of ${s.active.length} reviewed`
+                : "No CVs yet"}
+          </span>
+        </div>
+        <Button variant="outline" asChild>
+          <NavLink
+            href={href}
+            navigate={navigate}
+            aria-label={`${action.label} for ${v.title}`}
+          >
+            {action.label}
+            <ArrowRight data-icon="inline-end" />
+          </NavLink>
+        </Button>
+      </li>
+    );
+  };
   return (
     <>
       <header className="pagehead">
@@ -106,62 +158,27 @@ export function VacanciesHome({
           )}
         </section>
       ) : (
-        <ul className="vacancy-list" aria-label="Vacancies">
-          {vacancies.map((v) => {
-            const batch = v.batches.at(-1)!;
-            const s = batchSummary(batch);
-            const action = nextAction(batch, isAdmin);
-            const href = pathFor({
-              view: "batch",
-              vacancyId: v.id,
-              batchId: batch.id,
-              step: action.step,
-            });
-            return (
-              <li className="vacancy-row" key={v.id}>
-                <div className="vacancy-main">
-                  <h2>
-                    <NavLink href={href} navigate={navigate}>
-                      {v.title}
-                    </NavLink>
-                  </h2>
-                  <p>{[v.team, batch.label].filter(Boolean).join(" · ")}</p>
-                </div>
-                <div className="vacancy-progress">
-                  <ol
-                    className="step-strip"
-                    aria-label={`Progress: ${s.done.filter(Boolean).length} of 4 steps complete`}
-                  >
-                    {steps.map((name, i) => (
-                      <li
-                        key={name}
-                        className={s.done[i] ? "done" : ""}
-                        title={name}
-                      />
-                    ))}
-                  </ol>
-                  <span className="tabular-nums">
-                    {batch.snapshot
-                      ? `Finalised · ${batch.selected.length} shortlisted`
-                      : s.active.length
-                        ? `${s.reviewed} of ${s.active.length} reviewed`
-                        : "No CVs yet"}
-                  </span>
-                </div>
-                <Button variant="outline" asChild>
-                  <NavLink
-                    href={href}
-                    navigate={navigate}
-                    aria-label={`${action.label} for ${v.title}`}
-                  >
-                    {action.label}
-                    <ArrowRight data-icon="inline-end" />
-                  </NavLink>
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
+        <>
+          {openList.length > 0 && (
+            <ul className="vacancy-list" aria-label="Vacancies">
+              {openList.map(row)}
+            </ul>
+          )}
+          {finishedList.length > 0 && (
+            <section
+              className="finalised-group"
+              aria-labelledby="finalised-title"
+            >
+              <h2 id="finalised-title">
+                Finalised{" "}
+                <span className="tabular-nums">({finishedList.length})</span>
+              </h2>
+              <ul className="vacancy-list" aria-label="Finalised vacancies">
+                {finishedList.map(row)}
+              </ul>
+            </section>
+          )}
+        </>
       )}
     </>
   );

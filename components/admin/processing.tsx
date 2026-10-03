@@ -167,9 +167,9 @@ export function ProcessingTab({
               Monthly processing allowance
             </h3>
             <p className="text-sm text-muted-foreground">
-              Includes queued uploads, AI criteria drafts, processing attempts and retries, even
-              when processing fails. This is not a completed-CV count or spend.
-              The period is based on UTC.
+              Includes queued uploads, AI criteria drafts, processing attempts
+              and retries, even when processing fails. This is not a
+              completed-CV count or spend. The period is based on UTC.
             </p>
           </div>
           {allowance ? (
@@ -192,14 +192,14 @@ export function ProcessingTab({
                 ))}
               </dl>
               {allowance.state === "near_limit" && (
-                <p role="status" className="text-sm text-amber-700 dark:text-amber-300">
+                <p role="status" className="text-sm font-medium text-warning">
                   This workspace is nearing its monthly processing allowance.
                 </p>
               )}
               {allowance.state === "exhausted" && (
                 <p role="status" className="text-sm text-destructive">
-                  This workspace has used its monthly processing allowance.
-                  New processing requires remaining allowance. Files needing
+                  This workspace has used its monthly processing allowance. New
+                  processing requires remaining allowance. Files needing
                   attention may also need an explicit retry.
                 </p>
               )}

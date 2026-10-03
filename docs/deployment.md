@@ -32,3 +32,5 @@ After checkout of a tested release tag, run `npm run manifest`. Retain `outputs/
 Use explicit hosted-smoke mode as documented in environment.md. Re-run default authenticated mode after the temporary fictional pilot expires. Customer sender delivery, privacy/data-route approval, independent recruiter evidence and another operator acceptance remain required.
 
 Processing allowance periods use the database UTC month. Verify `show timezone` returns UTC in the intended project. Source `engines.node=22.x` overrides the platform project default; verify effective deployment metadata, as explained by the [Vercel Node version documentation](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions).
+
+Customer approval and independent-session worksheet: [customer-acceptance-packet.md](customer-acceptance-packet.md). It distinguishes current developer evidence from pending decisions and another operator’s required checks.
