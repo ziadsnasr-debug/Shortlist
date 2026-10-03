@@ -148,15 +148,15 @@ describe("lintCriterion", () => {
     );
   });
 
-  it("raises only wording hints, never proxy or structure ones, on the shipped examples", () => {
-    const rubrics = [
-      sampleRubric,
-      ...ROLE_TEMPLATES.map((t) => instantiateRoleTemplate(t.id)),
-    ];
-    for (const rubric of rubrics)
-      for (const c of rubric)
-        for (const hint of lintCriterion(c, rubric))
-          expect(["compound", "vague"]).toContain(hint.code);
+  it("raises nothing on the shipped templates and only a compound hint on the sample", () => {
+    for (const template of ROLE_TEMPLATES) {
+      const rubric = instantiateRoleTemplate(template.id);
+      for (const c of rubric) expect(lintCriterion(c, rubric)).toEqual([]);
+    }
+    const hinted = sampleRubric.flatMap((c) =>
+      lintCriterion(c, sampleRubric).map((hint) => `${c.id}:${hint.code}`),
+    );
+    expect(hinted).toEqual(["c3:compound"]);
   });
 });
 
@@ -166,11 +166,9 @@ describe("lintRubric", () => {
     expect(lintRubric(sampleRubric)).toEqual([]);
   });
 
-  it("flags too few criteria, as the role templates have", () => {
+  it("flags too few criteria, and the role templates no longer do", () => {
     for (const t of ROLE_TEMPLATES)
-      expect(lintRubric(instantiateRoleTemplate(t.id)).map((h) => h.code)).toContain(
-        "count",
-      );
+      expect(lintRubric(instantiateRoleTemplate(t.id))).toEqual([]);
     expect(lintRubric(sampleRubric.slice(0, 5))[0].message).toMatch(
       /^Fewer than six/,
     );

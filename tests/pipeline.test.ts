@@ -58,9 +58,11 @@ it("sends only the approved criteria definitions and the vacancy title", async (
   enable();
   const a = app();
   mock.generate.mockResolvedValue({ output: { criteria: [] }, usage: {} });
-  const rubric = sampleRubric.map((c, i) =>
-    i === 0 ? { ...c, equivalents: "Ran a customer community" } : c,
-  );
+  const rubric = sampleRubric.map((c, i) => {
+    if (i === 0) return { ...c, equivalents: "Ran a customer community" };
+    if (i === 1) return { ...c, equivalents: undefined };
+    return c;
+  });
   await assess(a, rubric, undefined, undefined, "Customer success manager");
   const [first, second] = mock.generate.mock.calls.map((c) => c[0]);
   expect(first.prompt).toBe(second.prompt);

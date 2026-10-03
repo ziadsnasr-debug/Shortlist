@@ -98,7 +98,11 @@ describe("server workflow", () => {
     ).toThrow();
   });
   it("treats equivalents as optional and bounded", () => {
-    expect(sampleRubric[0]).not.toHaveProperty("equivalents");
+    const withoutEquivalents = sampleRubric.map((c) => ({
+      ...c,
+      equivalents: undefined,
+    }));
+    expect(() => validateRubric(withoutEquivalents)).not.toThrow();
     expect(() => validateRubric(sampleRubric)).not.toThrow();
     const withEquivalents = (equivalents: string) =>
       sampleRubric.map((c, i) => (i === 0 ? { ...c, equivalents } : c));

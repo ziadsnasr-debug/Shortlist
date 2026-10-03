@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ROLE_TEMPLATES, instantiateRoleTemplate } from "@/lib/role-templates";
+import { lintCriterion, lintRubric } from "@/lib/criteria-lint";
 import { isComplete, totalPoints } from "@/components/workflow/criteria/model";
 
 describe("role templates", () => {
@@ -31,5 +32,27 @@ describe("role templates", () => {
     );
     first[0].title = "Edited locally";
     expect(ROLE_TEMPLATES.find((template) => template.id === "service-desk")!.criteria[0].title).not.toBe("Edited locally");
+  });
+
+  it("ships six to eight criteria, at most three essentials and equivalents on each", () => {
+    for (const template of ROLE_TEMPLATES) {
+      expect(template.version).toBe(2);
+      expect(template.criteria.length).toBeGreaterThanOrEqual(6);
+      expect(template.criteria.length).toBeLessThanOrEqual(8);
+      expect(
+        template.criteria.filter((criterion) => criterion.essential).length,
+      ).toBeLessThanOrEqual(3);
+      for (const criterion of template.criteria)
+        expect(criterion.equivalents?.trim()).toBeTruthy();
+    }
+  });
+
+  it("raises no wording or rubric hints on any preset", () => {
+    for (const template of ROLE_TEMPLATES) {
+      const rubric = instantiateRoleTemplate(template.id);
+      for (const criterion of rubric)
+        expect(lintCriterion(criterion, rubric)).toEqual([]);
+      expect(lintRubric(rubric)).toEqual([]);
+    }
   });
 });
