@@ -11,6 +11,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme={resolvedTheme as ToasterProps["theme"]}
+      // The review bar and selection tray are sticky at the bottom with their
+      // primary action on the right; a bottom toast would cover it.
+      position="top-right"
       className="toaster group"
       toastOptions={{
         classNames: {

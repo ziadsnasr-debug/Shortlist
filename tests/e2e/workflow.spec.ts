@@ -38,6 +38,7 @@ test("complete synthetic batch, tie gate, immutable export", async ({
     });
   }
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  const saveLatencies: number[] = [];
   for (let i = 0; i < 6; i++) {
     // The CV list always shows every label; wait for the form itself.
     await expect(page.locator(".review-identity h3")).toHaveText(
@@ -72,24 +73,38 @@ test("complete synthetic batch, tie gate, immutable export", async ({
         "I reviewed this CV, its criteria and the source evidence. These decisions are mine.",
       )
       .check();
+    const confirm = page.getByRole("button", {
+      name: "Confirm and next",
+      exact: true,
+    });
+    // Every gate is satisfied before the save budget starts.
+    await expect(confirm).toBeEnabled();
     const reviewSave = page.waitForResponse(
       (response) =>
         new URL(response.url()).pathname === "/api/workspace" &&
         response.request().method() === "POST",
       { timeout: 10_000 },
     );
-    await page
-      .getByRole("button", { name: "Confirm and next", exact: true })
-      .click();
+    // Nothing may cover the action: an overlay must fail here, not silently
+    // spend the save budget while Playwright waits for it to leave.
+    await confirm.click({ timeout: 2_000 });
     const savedResponse = await reviewSave;
     expect(savedResponse.status()).toBe(200);
-    const savedState = await (
-      await page.request.get("/api/workspace")
-    ).json();
+    await savedResponse.finished();
+    saveLatencies.push(
+      Math.round(savedResponse.request().timing().responseEnd),
+    );
+    const savedState = await (await page.request.get("/api/workspace")).json();
     expect(savedState.vacancies[0].batches[0].applications[i].confirmed).toBe(
       true,
     );
   }
+  // Request start to response end per save, so CI logs show real latency.
+  console.log(`review save latency ms: ${saveLatencies.join(", ")}`);
+  await test.info().attach("review-save-latency-ms", {
+    body: JSON.stringify(saveLatencies),
+    contentType: "application/json",
+  });
   await expect(
     page.getByRole("heading", { name: "Choose your shortlist", exact: true }),
   ).toBeVisible();
