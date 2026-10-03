@@ -24,7 +24,7 @@ const manifest = {
   specification: "1.2 / 2026-10-02",
   data: "synthetic only",
   defaultAiEnabled: false,
-  evidencePromptVersion: "evidence-v3-openai",
+  evidencePromptVersion: "evidence-v4-openai",
   extractionVersion: "extract-v1",
   parserBundle: existsSync("work/parser/manifest.json")
     ? JSON.parse(readFileSync("work/parser/manifest.json", "utf8"))

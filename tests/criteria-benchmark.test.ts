@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
-import { EVIDENCE_V3_SYSTEM, buildEvidencePrompt } from "../lib/pipeline/ai";
+import { EVIDENCE_SYSTEM, buildEvidencePrompt } from "../lib/pipeline/ai";
 import {
   ALL_ARMS,
   ARMS,
   V2_SYSTEM,
+  V3_SYSTEM,
   V4_SYSTEM,
   buildV2Prompt,
 } from "../scripts/benchmark/criteria/arms";
@@ -107,7 +108,7 @@ describe("arms", () => {
       rubric,
       "Accounts assistant",
     );
-    expect(b.system).toBe(EVIDENCE_V3_SYSTEM);
+    expect(b.system).toBe(V3_SYSTEM);
     expect(b.prompt).toBe(
       buildEvidencePrompt(app, rubric, "Accounts assistant"),
     );
@@ -128,7 +129,7 @@ describe("arms", () => {
     const rubric = rubricFor(1, "service-desk");
     expect(ARMS[0].build(app, rubric, "x").system).toBe(V2_SYSTEM);
     expect(ARMS[2].build(app, rubric, "Service desk analyst").system).toBe(
-      EVIDENCE_V3_SYSTEM,
+      V3_SYSTEM,
     );
     expect(ARMS[3].build(app, rubric, "x").prompt).toBe(
       buildV2Prompt(app, rubric),
@@ -686,5 +687,14 @@ describe("ngram helpers", () => {
       sharedNgram("one two three four", "one two three four five"),
     ).toBeNull();
     expect(ngrams("a b c d e f").size).toBe(2);
+  });
+});
+
+describe("production evidence prompt", () => {
+  it("is the confirmed v4 text and v3 stays frozen for the benchmark", () => {
+    expect(EVIDENCE_SYSTEM).toBe(V4_SYSTEM);
+    expect(createHash("sha256").update(V3_SYSTEM).digest("hex")).toBe(
+      "c7f9e0863434206efe22b75ac8fb4643786424d0939726aed9d504619ccd21a3",
+    );
   });
 });
