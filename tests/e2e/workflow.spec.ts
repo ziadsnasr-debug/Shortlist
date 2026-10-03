@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect } from "@playwright/test";
 import { publishCriteria } from "./criteria-helpers";
+import { origin } from "./origin";
 const criteria = "/vacancies/customer-success/first-batch/criteria";
 test("complete synthetic batch, tie gate, immutable export", async ({
   page,
@@ -183,7 +184,7 @@ test("complete synthetic batch, tie gate, immutable export", async ({
   expect(csv).not.toContain("Morgan Ellis");
   const state = await (await page.request.get("/api/workspace")).json();
   const forged = await page.request.post("/api/workspace", {
-    headers: { origin: "http://127.0.0.1:3217" },
+    headers: { origin },
     data: {
       version: state.version,
       action: {
@@ -223,7 +224,7 @@ test("server rejects stale saves and cross-origin mutations", async ({
   expect(
     (
       await page.request.post("/api/workspace", {
-        headers: { origin: "http://127.0.0.1:3217" },
+        headers: { origin },
         data: body,
       })
     ).status(),
@@ -231,7 +232,7 @@ test("server rejects stale saves and cross-origin mutations", async ({
   expect(
     (
       await page.request.post("/api/workspace", {
-        headers: { origin: "http://127.0.0.1:3217" },
+        headers: { origin },
         data: body,
       })
     ).status(),
@@ -281,7 +282,7 @@ test("hostile criteria text stays inert through review and no original is served
 }) => {
   const calls: string[] = [];
   page.on("request", (r) => {
-    if (!r.url().startsWith("http://127.0.0.1:3217")) calls.push(r.url());
+    if (!r.url().startsWith(origin)) calls.push(r.url());
   });
   await page.goto(criteria);
   await expect(
@@ -292,7 +293,7 @@ test("hostile criteria text stays inert through review and no original is served
   rubric[0].title =
     '<img src="https://example.invalid/tracker" onerror="alert(1)">';
   const saved = await page.request.post("/api/workspace", {
-    headers: { origin: "http://127.0.0.1:3217" },
+    headers: { origin },
     data: {
       version: state.version,
       action: {

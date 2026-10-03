@@ -18,7 +18,7 @@ Both the persistent local app and a dedicated free hosted synthetic instance are
 
 ## Checks and tooling
 
-`npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e`. With isolated local Supabase running, `npm run test:integration` creates/cleans disposable fictional users and tests ownership, queue/deletion and actual object/database restore. Never point that harness at cloud data. `npm run test:recovery` separately verifies 1,005-record pagination, abandoned reservations, fresh-target reviewer reconciliation and queued restore.
+`npm test`, `npm run typecheck`, `npm run lint`, `npm run build`, `npm run test:e2e` (serves on 127.0.0.1:3217; set `E2E_PORT` to run beside another checkout's suite). With isolated local Supabase running, `npm run test:integration` creates/cleans disposable fictional users and tests ownership, queue/deletion and actual object/database restore. Never point that harness at cloud data. `npm run test:recovery` separately verifies 1,005-record pagination, abandoned reservations, fresh-target reviewer reconciliation and queued restore.
 
 `npm run parser:build` creates dependency-only bundle/hash. `npm run parser:snapshot` requires the intended authenticated Vercel project and executes isolation probes. `npm run provider:spike` requires an approved direct API key/exact model and fictional data. Actual parser isolation probes and the live OpenAI two-pass synthetic spike passed; semantic accuracy and customer acceptance remain pending.
 

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { publishCriteria } from "./criteria-helpers";
+import { origin } from "./origin";
 
 test.afterEach(async ({ page }) => {
   await page.unrouteAll({ behavior: "wait" });
@@ -69,7 +70,7 @@ test("interrupted upload remains visible and polling does not erase its error", 
       json: {
         documentId: "document",
         applicationId: "A101",
-        uploadUrl: "http://127.0.0.1:3217/mock-upload",
+        uploadUrl: `${origin}/mock-upload`,
         version: 2,
       },
     });
@@ -140,7 +141,7 @@ test("transfer and queue progress do not claim analysis has completed", async ({
         json: {
           documentId: "document",
           applicationId: "A101",
-          uploadUrl: "http://127.0.0.1:3217/mock-upload",
+          uploadUrl: `${origin}/mock-upload`,
           version: 2,
         },
       });

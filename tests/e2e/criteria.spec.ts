@@ -1,9 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { test, expect, type Page } from "@playwright/test";
 import { publishCriteria } from "./criteria-helpers";
+import { origin } from "./origin";
 
 const criteria = "/vacancies/customer-success/first-batch/criteria";
-const origin = "http://127.0.0.1:3217";
 const incompleteReason =
   "Add a requirement and both evidence definitions to every criterion before saving.";
 
