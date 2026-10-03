@@ -6,6 +6,8 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:3217",
     browserName: "chromium",
     screenshot: "only-on-failure",
+    // CI uploads test-results on failure; the trace shows why an action waited.
+    trace: "retain-on-failure",
   },
   webServer: {
     command: "npm run start -- --port 3217",
