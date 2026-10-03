@@ -36,7 +36,8 @@ export function CommandMenu({
   onOpenChange,
   vacancies,
   route,
-  isAdmin,
+  canCreate,
+  canAdminister,
   navigate,
   onHelp,
 }: {
@@ -44,7 +45,8 @@ export function CommandMenu({
   onOpenChange: (open: boolean) => void;
   vacancies: PublicVacancy[];
   route: Route;
-  isAdmin: boolean;
+  canCreate: boolean;
+  canAdminister: boolean;
   navigate: Navigate;
   onHelp: () => void;
 }) {
@@ -92,14 +94,14 @@ export function CommandMenu({
               >
                 <BriefcaseBusiness aria-hidden="true" /> Vacancies
               </CommandItem>
-              {isAdmin && (
+              {canCreate && (
                 <CommandItem
                   onSelect={() => run(() => navigate(pathFor({ view: "new" })))}
                 >
                   <Plus aria-hidden="true" /> New vacancy
                 </CommandItem>
               )}
-              {isAdmin && (
+              {canAdminister && (
                 <CommandItem
                   onSelect={() =>
                     run(() => navigate(pathFor({ view: "admin" })))

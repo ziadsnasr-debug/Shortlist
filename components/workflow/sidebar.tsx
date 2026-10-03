@@ -42,7 +42,10 @@ import type { PublicVacancy } from "./types";
 type SidebarProps = {
   vacancies: PublicVacancy[];
   route: Route;
-  isAdmin: boolean;
+  /** Administrators can create vacancies, including in the open pilot. */
+  canCreate: boolean;
+  /** Administration needs a signed-in hosted workspace, so the open pilot hides it. */
+  canAdminister: boolean;
   role: string;
   canSignOut: boolean;
   navigate: Navigate;
@@ -70,7 +73,7 @@ function ProgressRing({ value }: { value: number }) {
 function SidebarNav({
   vacancies,
   route,
-  isAdmin,
+  canCreate,
   navigate,
   onNavigate,
   onJump,
@@ -131,7 +134,7 @@ function SidebarNav({
           <BriefcaseBusiness aria-hidden="true" />
           <span className="side-label">Vacancies</span>
         </NavLink>
-        {isAdmin && (
+        {canCreate && (
           <NavLink
             href={pathFor({ view: "new" })}
             navigate={go}
@@ -231,7 +234,7 @@ export function Sidebar(props: SidebarProps) {
   const [open, setOpen] = useState(false);
   const footer = (
     <div className="sidefoot">
-      {props.isAdmin && (
+      {props.canAdminister && (
         <NavLink
           className="side-link"
           href={pathFor({ view: "admin" })}

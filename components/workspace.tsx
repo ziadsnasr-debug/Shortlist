@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Administration } from "./administration";
 import { Notice, Panel } from "./workflow/common";
+import { navCapabilities } from "./workflow/capabilities";
 import type { Action } from "@/lib/workflow";
 import { steps, type State, type Send } from "./workflow/types";
 import { Criteria } from "./workflow/criteria";
@@ -156,6 +157,7 @@ export function WorkspaceApp({ initial = null }: { initial?: State | null }) {
 
   const route = parsePath(path);
   const isAdmin = state?.role === "administrator";
+  const { canCreate, canAdminister } = navCapabilities(state);
   const vacancy =
     route.view === "batch"
       ? state?.vacancies.find((v) => v.id === route.vacancyId)
@@ -293,19 +295,18 @@ export function WorkspaceApp({ initial = null }: { initial?: State | null }) {
       />
     );
   else if (route.view === "admin")
-    page =
-      isAdmin && !state?.temporaryPublic ? (
-        <Administration />
-      ) : (
-        <>
-          <h1 id="page-title" tabIndex={-1}>
-            Administration
-          </h1>
-          <Notice>
-            Administration is available to workspace administrators only.
-          </Notice>
-        </>
-      );
+    page = canAdminister ? (
+      <Administration />
+    ) : (
+      <>
+        <h1 id="page-title" tabIndex={-1}>
+          Administration
+        </h1>
+        <Notice>
+          Administration is available to workspace administrators only.
+        </Notice>
+      </>
+    );
   else if (route.view === "missing" || !vacancy || !batch)
     page = (
       <section className="panel empty">
@@ -475,7 +476,8 @@ export function WorkspaceApp({ initial = null }: { initial?: State | null }) {
       <Sidebar
         vacancies={state?.vacancies ?? []}
         route={route}
-        isAdmin={isAdmin && !state?.temporaryPublic}
+        canCreate={canCreate}
+        canAdminister={canAdminister}
         role={state?.role ?? "reviewer"}
         canSignOut={state?.mode === "Supabase synthetic"}
         navigate={navigate}
@@ -487,7 +489,8 @@ export function WorkspaceApp({ initial = null }: { initial?: State | null }) {
         onOpenChange={setJump}
         vacancies={state?.vacancies ?? []}
         route={route}
-        isAdmin={isAdmin}
+        canCreate={canCreate}
+        canAdminister={canAdminister}
         navigate={navigate}
         onHelp={() => setHelp(true)}
       />
