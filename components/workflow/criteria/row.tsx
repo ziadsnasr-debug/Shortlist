@@ -176,9 +176,8 @@ export function CriterionRow({
   return (
     <m.li
       layout={instant ? false : "position"}
-      initial={animateIn ? { opacity: 0, y: 6 } : false}
+      initial={animateIn ? { y: 6 } : false}
       animate={{
-        opacity: 1,
         y: 0,
         transition: { ...enterTransition, delay: enterDelay },
       }}
