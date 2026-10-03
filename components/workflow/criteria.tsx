@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Plus, Sparkles } from "lucide-react";
+import { ArrowRight, Lightbulb, Plus, Sparkles } from "lucide-react";
 import { AnimatePresence, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 import { Alert } from "@/components/ui/alert";
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NativeSelect } from "@/components/ui/native-select";
+import { lintCriterion, lintRubric } from "@/lib/criteria-lint";
 import { type Criterion } from "@/lib/workflow";
 import { WeightChart } from "../workspace-insights";
 import { sampleRubric } from "@/fixtures/synthetic/seed";
@@ -24,6 +25,7 @@ import { Notice } from "./common";
 import {
   INCOMPLETE_REASON,
   MAX_CRITERIA,
+  balance,
   groupCriteria,
   groupOrder,
   isComplete,
@@ -66,6 +68,7 @@ export function Criteria({
     [expanded, setExpanded] = useState<Set<string>>(() => new Set()),
     [fresh, setFresh] = useState<Set<string>>(() => new Set()),
     [aiIds, setAiIds] = useState<string[]>([]),
+    [quiet, setQuiet] = useState<Set<string>>(() => new Set()),
     [drafting, setDrafting] = useState(false),
     [conflict, setConflict] = useState(false),
     [reloading, setReloading] = useState(false),
@@ -85,6 +88,12 @@ export function Criteria({
   const sections = groups.map((g) => g.key).filter(Boolean);
   const incomplete = rubric.some((c) => !isComplete(c));
   const essentials = rubric.filter((c) => c.essential).length;
+  const rubricHints = editable ? lintRubric(rubric) : [];
+  const hintsFor = (c: Criterion) => (editable ? lintCriterion(c, rubric) : []);
+  // Template and example rows stay quiet until the recruiter edits them, but
+  // the publish summary still counts their suggestions.
+  const rowHints = (c: Criterion) => (quiet.has(c.id) ? [] : hintsFor(c));
+  const wordingCount = rubric.filter((c) => hintsFor(c).length > 0).length;
 
   // Load latest: once the refreshed workspace arrives, adopt its criteria and
   // drop the local draft. The draft is never replaced before then.
@@ -96,6 +105,7 @@ export function Criteria({
       setDirty(false);
       setConflict(false);
       setAiIds([]);
+      setQuiet(new Set());
       setExpanded(new Set());
       setFresh(new Set());
     }
@@ -114,6 +124,12 @@ export function Criteria({
     instantTimer.current = window.setTimeout(() => setInstant(false), 400);
   }
   function edit(id: string, patch: Partial<Criterion>) {
+    setQuiet((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
     setAiIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : prev,
     );
@@ -183,13 +199,37 @@ export function Criteria({
       },
     });
   }
+  function rebalance() {
+    const before = rubric;
+    // The button unmounts once the total reaches 100, so focus moves on.
+    pendingFocus.current = incomplete ? "add-criterion" : "save-criteria";
+    mutate((rows) => balance(rows));
+    setAnnouncement("Points balanced to 100.");
+    toast("Points balanced to 100.", {
+      duration: 8000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          mutate((rows) =>
+            rows.map((r) => ({
+              ...r,
+              points: before.find((b) => b.id === r.id)?.points ?? r.points,
+            })),
+          );
+          setAnnouncement("Restored the previous points.");
+        },
+      },
+    });
+  }
   function replaceAll(next: Criterion[], message: string, aiDraft = false) {
     const before = rubric;
     const wasDirty = dirty;
     const beforeAi = aiIds;
+    const beforeQuiet = quiet;
     markFresh(next.map((c) => c.id));
     setExpanded(new Set());
     setAiIds(aiDraft ? next.map((c) => c.id) : []);
+    setQuiet(aiDraft ? new Set() : new Set(next.map((c) => c.id)));
     setRubric(groupOrder(next));
     setDirty(true);
     setAnnouncement(message);
@@ -201,6 +241,7 @@ export function Criteria({
           setRubric(before);
           setDirty(wasDirty);
           setAiIds(beforeAi);
+          setQuiet(beforeQuiet);
           markFresh(before.map((c) => c.id));
         },
       },
@@ -280,6 +321,7 @@ export function Criteria({
     }
   }
   function loadLatest() {
+    toast.dismiss();
     setReloading(true);
     onReload?.();
   }
@@ -325,8 +367,8 @@ export function Criteria({
       {editable && (
         <div className="mt-4">
           <Notice>
-            Criteria suggestions are editable examples, not AI output. Employer
-            approval is required before publication.
+            Templates, examples and AI drafts are editable starting points. An
+            administrator approves and publishes the final criteria.
           </Notice>
         </div>
       )}
@@ -368,6 +410,19 @@ export function Criteria({
           )}
         </div>
       )}
+      {!drafting && rubricHints.length > 0 && (
+        <ul className="mt-4 grid gap-1 text-sm text-muted-foreground">
+          {rubricHints.map((hint) => (
+            <li key={hint.code} className="flex items-start gap-2">
+              <Lightbulb
+                aria-hidden="true"
+                className="mt-0.5 size-4 shrink-0"
+              />
+              <span>{hint.message}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="mt-4 grid gap-6" aria-busy={drafting || undefined}>
         {drafting ? (
           <div className="overflow-hidden rounded-xl border border-border bg-card">
@@ -404,6 +459,7 @@ export function Criteria({
                     <CriterionRow
                       key={c.id}
                       criterion={c}
+                      hints={rowHints(c)}
                       editable={editable}
                       busy={busy}
                       expanded={expanded.has(c.id)}
@@ -507,7 +563,17 @@ export function Criteria({
         <div className="actions">
           {editable ? (
             <>
+              {rubric.length > 0 && total !== 100 && (
+                <Button
+                  variant="outline"
+                  disabled={busy || drafting}
+                  onClick={rebalance}
+                >
+                  Balance to 100
+                </Button>
+              )}
               <Button
+                id="save-criteria"
                 variant="outline"
                 aria-describedby={footerNote}
                 disabled={busy || drafting || incomplete}
@@ -548,7 +614,9 @@ export function Criteria({
             <DialogTitle>Publish these criteria?</DialogTitle>
             <DialogDescription>
               Publishing freezes these criteria for this batch. You can&apos;t
-              change them after CVs are added.
+              change them after CVs are added. Essential criteria need full
+              evidence on a CV; partial or missing evidence needs a written
+              exception at shortlist.
             </DialogDescription>
           </DialogHeader>
           <dl className="grid grid-cols-3 gap-3 rounded-lg bg-surface-2 p-3 text-sm">
@@ -569,6 +637,23 @@ export function Criteria({
               <dd className="text-base font-semibold tabular-nums">{total}</dd>
             </div>
           </dl>
+          {(rubricHints.length > 0 || wordingCount > 0) && (
+            <div className="grid gap-2 text-sm">
+              <p className="font-medium">Suggestions before you publish</p>
+              <ul className="grid gap-1.5 text-muted-foreground">
+                {rubricHints.map((hint) => (
+                  <li key={hint.code}>{hint.message}</li>
+                ))}
+                {wordingCount > 0 && (
+                  <li>
+                    {wordingCount === 1
+                      ? "1 criterion has a suggestion."
+                      : `${wordingCount} criteria have suggestions.`}
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
           <DialogFooter className="gap-2 sm:gap-0">
             <DialogClose asChild>
               <Button variant="outline" disabled={busy}>

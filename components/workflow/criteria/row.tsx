@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Copy,
   Ellipsis,
+  Lightbulb,
   Minus,
   Plus,
   Sparkles,
@@ -25,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { StatusChip } from "@/components/ui/status-chip";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import type { CriterionHint } from "@/lib/criteria-lint";
 import { type Criterion } from "@/lib/workflow";
 import { enterTransition, exitTransition, layoutSpring } from "./motion";
 import { issues } from "./model";
@@ -122,6 +124,7 @@ function PointsStepper({
 
 export type RowProps = {
   criterion: Criterion;
+  hints: CriterionHint[];
   editable: boolean;
   busy: boolean;
   expanded: boolean;
@@ -144,6 +147,7 @@ export type RowProps = {
 
 export function CriterionRow({
   criterion: c,
+  hints,
   editable,
   busy,
   expanded,
@@ -168,6 +172,8 @@ export function CriterionRow({
   const label = c.title.trim() || "new criterion";
   const lock = busy;
   const detailsId = `definitions-${c.id}`;
+  const hintsId = `hints-${c.id}`;
+  const showHints = editable && hints.length > 0;
   const commitSection = () => {
     if (sectionDraft !== null && sectionDraft.trim() !== c.section.trim())
       onChange({ section: sectionDraft.trim() });
@@ -197,6 +203,7 @@ export function CriterionRow({
               maxLength={200}
               readOnly={!editable}
               disabled={lock}
+              aria-describedby={showHints ? hintsId : undefined}
               onChange={(e) => onChange({ title: e.target.value })}
             />
           </div>
@@ -294,6 +301,28 @@ export function CriterionRow({
             )}
           </div>
         )}
+        {showHints && (
+          <ul
+            id={hintsId}
+            className="mt-2 grid gap-1 text-sm text-muted-foreground"
+          >
+            {hints.map((hint) => (
+              <li key={hint.code} className="flex items-start gap-2">
+                <Lightbulb
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0"
+                />
+                <span>{hint.message}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {expanded && (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Essential criteria need full evidence. Partial or missing evidence
+            needs a written exception at shortlist.
+          </p>
+        )}
         {expanded && (
           <m.div
             id={detailsId}
@@ -309,7 +338,8 @@ export function CriterionRow({
                 maxLength={1000}
                 readOnly={!editable}
                 disabled={lock}
-                placeholder="What a CV shows when this requirement is clearly met"
+                aria-describedby={showHints ? hintsId : undefined}
+                placeholder="What the CV shows when this is fully met, for example “Owned a portfolio of customer accounts”"
                 onChange={(e) => onChange({ full: e.target.value })}
               />
             </div>
@@ -321,7 +351,8 @@ export function CriterionRow({
                 maxLength={1000}
                 readOnly={!editable}
                 disabled={lock}
-                placeholder="What a CV shows when it is only partly met"
+                aria-describedby={showHints ? hintsId : undefined}
+                placeholder="Some evidence, but short of full, for example “Supported accounts owned by someone else”. Anything less is not evidenced."
                 onChange={(e) => onChange({ partial: e.target.value })}
               />
             </div>

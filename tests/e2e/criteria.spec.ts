@@ -77,6 +77,29 @@ test("role template picker is accessible and loads a fresh valid draft", async (
   ).toBeVisible();
 });
 
+test("a loaded template row stays quiet until it is edited", async ({
+  page,
+}) => {
+  await page.route("**/api/workspace?reveal=false", async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    body.vacancies[0].batches[0].rubric = [];
+    body.vacancies[0].batches[0].published = false;
+    await route.fulfill({ response, json: body });
+  });
+  await open(page);
+  await page
+    .getByLabel("Start from a role template", { exact: false })
+    .selectOption("customer-success");
+  await expect(requirements(page)).toHaveCount(4);
+  const compound = page.getByText("Covers more than one requirement.");
+  await expect(compound).toHaveCount(0);
+  // Rubric-level hints still show.
+  await expect(page.getByText(/^Fewer than six criteria/)).toBeVisible();
+  await requirements(page).nth(2).fill("Retention and reporting.");
+  await expect(compound).toHaveCount(1);
+});
+
 test("templates save, persist, stay hidden after publish, and are admin-only", async ({
   page,
 }) => {
@@ -245,6 +268,39 @@ test("removing a criterion can be undone from the toast", async ({ page }) => {
   await expect(
     allocation(page).getByText("100 of 100 points · ready to publish"),
   ).toBeVisible();
+});
+
+test("wording hints stay advisory and Balance to 100 can be undone", async ({
+  page,
+}) => {
+  await open(page);
+  const first = requirements(page).first();
+  await first.fill("Strong account ownership");
+  const hint =
+    "“strong” is open to interpretation. Name what the CV would show instead.";
+  await expect(page.getByText(hint)).toBeVisible();
+  await expect(first).toHaveAccessibleDescription(hint);
+  await expect(
+    page.getByRole("button", { name: "Save criteria draft", exact: true }),
+  ).toBeEnabled();
+
+  const balance = page.getByRole("button", { name: "Balance to 100" });
+  await expect(balance).toHaveCount(0);
+  await page.getByLabel("Points", { exact: true }).first().fill("19");
+  await expect(
+    allocation(page).getByText("94 of 100 points · 6 to allocate"),
+  ).toBeVisible();
+  await balance.click();
+  await expect(
+    allocation(page).getByText("100 of 100 points · ready to publish"),
+  ).toBeVisible();
+  await expect(balance).toHaveCount(0);
+  await expect(page.locator("#save-criteria")).toBeFocused();
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(
+    allocation(page).getByText("94 of 100 points · 6 to allocate"),
+  ).toBeVisible();
+  await expect(balance).toBeVisible();
 });
 
 test("an incomplete criterion disables saving and says why", async ({
