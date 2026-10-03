@@ -215,6 +215,10 @@ test("the first screen arrives with data once the workspace cookie exists", asyn
 });
 
 test("finalised vacancies collapse below open work", async ({ page }) => {
+  // Establish one workspace cookie before navigation starts concurrent reads.
+  // Otherwise a late first-load response can replace the cookie between writes.
+  const initial = await page.request.get("/api/workspace");
+  expect(initial.ok()).toBe(true);
   await page.goto("/vacancies");
   await page.evaluate(async () => {
     const post = async (action: object) => {
@@ -229,7 +233,7 @@ test("finalised vacancies collapse below open work", async ({ page }) => {
         });
         const body = await r.json();
         if (r.ok) return body;
-        if (attempt === 3)
+        if (r.status !== 409 || attempt === 3)
           throw new Error(`${r.status} ${JSON.stringify(body)}`);
       }
     };
