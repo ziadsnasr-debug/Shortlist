@@ -2,8 +2,16 @@
 
 Shortlist includes three versioned, built-in role presets: customer success
 manager, accounts assistant and service desk analyst. They are editable starting
-points, not quality labels or automated recommendations. Each preset contains a
-complete rubric with at most 12 criteria and exactly 100 points.
+points, not quality labels or automated recommendations. The presets are
+version 2: each contains a complete rubric of six single-requirement criteria,
+each with equivalent evidence and two essentials, totalling exactly 100 points
+(and never more than 12 criteria). They were written so the builder's wording
+checks raise no suggestions.
+
+"Finance study" was deliberately not included in the accounts assistant preset.
+Qualification criteria are less observable on a CV and carry indirect
+discrimination risk. Recruiters can add one, with equivalents, if the employer
+requires it.
 
 Templates are available only to administrators while a batch is unpublished
 and its rubric is empty. Loading a template creates fresh criterion IDs and

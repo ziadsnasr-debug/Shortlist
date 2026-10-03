@@ -66,7 +66,7 @@ test("role template picker is accessible and loads a fresh valid draft", async (
   await expect(picker).toBeVisible();
   await expect(picker).toHaveValue("");
   await picker.selectOption("service-desk");
-  await expect(requirements(page)).toHaveCount(4);
+  await expect(requirements(page)).toHaveCount(6);
   await expect(
     allocation(page).getByText("100 of 100 points · ready to publish"),
   ).toBeVisible();
@@ -91,12 +91,13 @@ test("a loaded template row stays quiet until it is edited", async ({
   await page
     .getByLabel("Start from a role template", { exact: false })
     .selectOption("customer-success");
-  await expect(requirements(page)).toHaveCount(4);
+  await expect(requirements(page)).toHaveCount(6);
   const compound = page.getByText("Covers more than one requirement.");
   await expect(compound).toHaveCount(0);
-  // Rubric-level hints still show.
-  await expect(page.getByText(/^Fewer than six criteria/)).toBeVisible();
-  await requirements(page).nth(2).fill("Retention and reporting.");
+  // Templates are hint-free at rubric level too.
+  await expect(page.getByText(/^Fewer than six criteria/)).toHaveCount(0);
+  const title = requirements(page).nth(2);
+  await title.fill(`${await title.inputValue()} and reporting`);
   await expect(compound).toHaveCount(1);
 });
 
@@ -134,7 +135,7 @@ test("templates save, persist, stay hidden after publish, and are admin-only", a
   });
   await picker.selectOption("accounts-assistant");
   await expect(page.getByRole("textbox", { name: "Requirement" })).toHaveCount(
-    4,
+    6,
   );
   await expect(page.getByLabel("Requirement").first()).toHaveValue(
     "Transaction processing",
@@ -152,7 +153,7 @@ test("templates save, persist, stay hidden after publish, and are admin-only", a
   const firstIds = firstSaved.rubric.map(
     (criterion: { id: string }) => criterion.id,
   );
-  expect(firstIds).toHaveLength(4);
+  expect(firstIds).toHaveLength(6);
   await page.reload();
   await expect(page.getByLabel("Requirement").first()).toHaveValue(
     "Transaction processing",
@@ -198,8 +199,8 @@ test("templates save, persist, stay hidden after publish, and are admin-only", a
   const secondIds = secondSaved.rubric.map(
     (criterion: { id: string }) => criterion.id,
   );
-  expect(secondIds).toHaveLength(4);
-  expect(new Set([...firstIds, ...secondIds]).size).toBe(8);
+  expect(secondIds).toHaveLength(6);
+  expect(new Set([...firstIds, ...secondIds]).size).toBe(12);
 
   const reviewer = await createVacancy("Template reviewer view");
   const reviewerView = await (await page.request.get("/api/workspace")).json();
@@ -420,7 +421,9 @@ test("equivalent evidence saves and reloads", async ({ page }) => {
     .first()
     .click();
   const field = page.getByLabel("Also accept (equivalent evidence)");
-  await expect(field).toHaveValue("");
+  await expect(field).toHaveValue(
+    "Owning client relationships in an agency, consultancy, key account or membership role.",
+  );
   await expect(field).toHaveAttribute("maxlength", "500");
   await field.fill("Ran a customer community or user group");
   await page

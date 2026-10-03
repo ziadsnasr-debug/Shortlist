@@ -12,6 +12,7 @@ export const sampleRubric: Criterion[] = [
     essential: true,
     full: "Direct responsibility for an account portfolio and customer outcomes.",
     partial: "Supports someone else who owns the accounts.",
+    equivalents: "Owning client relationships in an agency, consultancy, key account or membership role.",
   },
   {
     id: "c2",
@@ -21,6 +22,7 @@ export const sampleRubric: Criterion[] = [
     essential: true,
     full: "Leads onboarding sessions or adoption plans.",
     partial: "Assists with onboarding without owning the process.",
+    equivalents: "Leading user training, product rollouts or new-client setup in another setting.",
   },
   {
     id: "c3",
@@ -30,6 +32,7 @@ export const sampleRubric: Criterion[] = [
     essential: false,
     full: "Produces reports and interprets trends to recommend actions.",
     partial: "Maintains reports without interpreting results.",
+    equivalents: "Dashboards, account health scores or usage analysis in any tool.",
   },
   {
     id: "c4",
@@ -39,6 +42,7 @@ export const sampleRubric: Criterion[] = [
     essential: false,
     full: "Uses CRM to manage activity and renewals.",
     partial: "CRM exposure without clear independent responsibilities.",
+    equivalents: "Any CRM or customer database, for example Salesforce, HubSpot, Zendesk or a bespoke system.",
   },
   {
     id: "c5",
@@ -48,6 +52,7 @@ export const sampleRubric: Criterion[] = [
     essential: false,
     full: "Sustained direct customer support or account responsibilities.",
     partial: "Some customer contact alongside other work.",
+    equivalents: "Retail, hospitality, help desk or service roles with direct customer contact.",
   },
   {
     id: "c6",
@@ -57,6 +62,7 @@ export const sampleRubric: Criterion[] = [
     essential: false,
     full: "Relevant completed training or concrete equivalent learning.",
     partial: "Relevant learning in progress or incompletely described.",
+    equivalents: "Short courses, certifications, employer training or listed self-study in customer success, sales or support.",
   },
 ];
 const passages = [
