@@ -53,7 +53,7 @@ Only transform and opacity animate. Nothing bounces. Keyboard-repeated actions c
 
 ## Brand
 
-The mark is three rounded bars of decreasing length, the top one brighter than the two below (`components/brand/logo.tsx`, `app/icon.svg`). It uses `currentColor` with a `--logo-accent` slot: teal on light surfaces, `--sidebar-accent` #54b9a5 on navy. The wordmark is "Shortlist" in Geist 600 at −0.02em.
+The mark is three rounded bars of decreasing length, the top one brighter than the two below (`components/brand/logo.tsx`, `app/icon.svg`). It uses `currentColor` with a `--logo-accent` slot: `--subtle-foreground` on light surfaces, and on the charcoal sidebar `--sidebar-accent` (#ffffff) for the top bar with `--logo-rest` (`--sidebar-muted`, #a1a1aa) for the two below. The wordmark is "Shortlist" in Geist 600 at −0.02em.
 
 ## Components
 
@@ -66,4 +66,9 @@ shadcn (new-york) on Radix in `components/ui/`. Every interactive component defi
 - Processing glyph: `components/workflow/processing.tsx`. Stages are only those the queue reports.
 - Review: three zones, compact agreed rows, "Check required" rows, evidence chosen in the source, sticky action bar that states blockers, shortcuts paused while typing.
 - Results: score composition bars with a cut line and tie chips, a table view as the spec fallback, contextual tie and exception fields, confirmation before finalising, a one-time finish mark.
+- Selects: `components/ui/native-select.tsx` is the native `<select>` styled like `Input` with an overlaid chevron; use it for short option lists (role templates, retention), and the Radix select only where options need rich content.
+- Vacancy lists: finalised vacancies collapse under "Finalised (N)" (a `<details>` in the sidebar, open when the current vacancy is finalised; a separate section on home) so open work stays on top.
+- Removed CVs recede through the glyph and a muted label only; never dim a whole row with opacity, which drops its text below 4.5:1.
+- Role-aware navigation: `navCapabilities(state)` (`components/workflow/capabilities.ts`) decides what the sidebar, command menu and admin route offer. Administrators can always create vacancies; administration is hidden in the open pilot, where the server refuses it.
+- Forced colours: backgrounds and shadows disappear, so filled buttons carry `forced-colors:border-[ButtonText]` and the sidebar and focus card get system-colour borders in a `forced-colors` block. Axe reports colour contrast under forced colours because it reads authored colours; judge that mode from screenshots.
 - Lessons from testing: never change layout on pointer-down; entrance motion slides without fading so Axe and readers see full contrast; screen-reader-only text inside a horizontal scroller needs a positioned container.
