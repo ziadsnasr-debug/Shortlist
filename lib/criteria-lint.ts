@@ -94,7 +94,7 @@ export function lintCriterion(
 ): CriterionHint[] {
   if (!c.title.trim()) return [];
   const hints: CriterionHint[] = [];
-  const fields = [c.title, c.full, c.partial];
+  const fields = [c.title, c.full, c.partial, c.equivalents ?? ""];
 
   if (/\s(?:and|&)\s|\//i.test(c.title.replace(FIXED_PAIRS, " ")))
     hints.push({

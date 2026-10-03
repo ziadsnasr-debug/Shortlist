@@ -439,6 +439,11 @@ export function ReviewForm({
                               <p>
                                 <strong>Partial:</strong> {c.partial}
                               </p>
+                              {c.equivalents?.trim() && (
+                                <p>
+                                  <strong>Also accept:</strong> {c.equivalents}
+                                </p>
+                              )}
                             </details>
                             <p className="evidence-hint">
                               {/* Same text whether active or not: activation must never shift layout under the pointer. */}

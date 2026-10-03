@@ -6,7 +6,13 @@ if (!config)
   throw new Error(
     "Enable direct API inference with an approved tested model and synthetic-only credentials.",
   );
-const result = await assess(samples(sampleRubric, 1)[0], sampleRubric);
+const result = await assess(
+  samples(sampleRubric, 1)[0],
+  sampleRubric,
+  undefined,
+  undefined,
+  "Customer success manager",
+);
 if (result.outputs.some((x) => x === null))
   throw new Error(
     "Provider capability spike did not produce two valid passes. No provider fallback used.",

@@ -97,6 +97,17 @@ describe("server workflow", () => {
       validateRubric(sampleRubric.map((c) => ({ ...c, id: "duplicate" }))),
     ).toThrow();
   });
+  it("treats equivalents as optional and bounded", () => {
+    expect(sampleRubric[0]).not.toHaveProperty("equivalents");
+    expect(() => validateRubric(sampleRubric)).not.toThrow();
+    const withEquivalents = (equivalents: string) =>
+      sampleRubric.map((c, i) => (i === 0 ? { ...c, equivalents } : c));
+    expect(() =>
+      validateRubric(withEquivalents("x".repeat(500))),
+    ).not.toThrow();
+    expect(() => validateRubric(withEquivalents(""))).not.toThrow();
+    expect(() => validateRubric(withEquivalents("x".repeat(501)))).toThrow();
+  });
   it("freezes published criteria", () => {
     expect(() =>
       command(opened(), { ...base, type: "rubric", rubric: sampleRubric }),

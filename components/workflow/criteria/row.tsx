@@ -356,6 +356,21 @@ export function CriterionRow({
                 onChange={(e) => onChange({ partial: e.target.value })}
               />
             </div>
+            <div className="grid gap-1.5 sm:col-span-2">
+              <Label htmlFor={`equivalents-${c.id}`}>
+                Also accept (equivalent evidence)
+              </Label>
+              <Textarea
+                id={`equivalents-${c.id}`}
+                value={c.equivalents ?? ""}
+                maxLength={500}
+                readOnly={!editable}
+                disabled={lock}
+                aria-describedby={showHints ? hintsId : undefined}
+                placeholder="Other evidence that counts, for example “Ran a customer community or user group”"
+                onChange={(e) => onChange({ equivalents: e.target.value })}
+              />
+            </div>
             <div className="grid gap-1.5 sm:col-span-2 sm:max-w-xs">
               <Label htmlFor={`section-${c.id}`}>Section</Label>
               <Input

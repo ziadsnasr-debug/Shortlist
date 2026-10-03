@@ -31,6 +31,7 @@ export const Criterion = z
     essential: z.boolean(),
     full: z.string().trim().min(1).max(1000),
     partial: z.string().trim().min(1).max(1000),
+    equivalents: z.string().trim().max(500).optional(),
   })
   .strict();
 export type Criterion = z.infer<typeof Criterion>;

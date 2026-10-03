@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { lintCriterion, lintRubric } from "@/lib/criteria-lint";
-import { balance, totalPoints } from "@/components/workflow/criteria/model";
+import { totalPoints } from "@/components/workflow/criteria/model";
+import { balance } from "@/lib/points";
 import { ROLE_TEMPLATES, instantiateRoleTemplate } from "@/lib/role-templates";
 import { sampleRubric } from "@/fixtures/synthetic/seed";
 import type { Criterion } from "@/lib/rules";

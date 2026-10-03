@@ -1,4 +1,7 @@
+import { balance, safePoints } from "@/lib/points";
 import type { Criterion } from "@/lib/workflow";
+
+export { balance };
 
 export const MAX_CRITERIA = 12;
 export const INCOMPLETE_REASON =
@@ -10,8 +13,6 @@ export type Group = {
   rows: Criterion[];
   points: number;
 };
-
-const safePoints = (c: Criterion) => (Number.isFinite(c.points) ? c.points : 0);
 
 export function totalPoints(rubric: Criterion[]) {
   return rubric.reduce((n, c) => n + safePoints(c), 0);
@@ -50,36 +51,6 @@ export function issues(c: Criterion) {
 export function isComplete(c: Criterion) {
   const i = issues(c);
   return !i.title && !i.section && !i.definitions;
-}
-
-/**
- * Rescales points to total exactly 100 by largest remainder, keeping every
- * criterion at 1 or more. Order and other fields are untouched.
- */
-export function balance(rubric: Criterion[]): Criterion[] {
-  if (!rubric.length) return [];
-  const raw = rubric.map(safePoints);
-  const sum = raw.reduce((n, p) => n + p, 0);
-  const weights = sum > 0 ? raw : raw.map(() => 1);
-  const weightTotal = sum > 0 ? sum : rubric.length;
-  const exact = weights.map((w) => (w * 100) / weightTotal);
-  const points = exact.map((x) => Math.max(1, Math.floor(x)));
-  let diff = 100 - points.reduce((n, p) => n + p, 0);
-  const byRemainder = exact
-    .map((x, i) => ({ i, rest: x - Math.floor(x) }))
-    .sort((a, b) => b.rest - a.rest || a.i - b.i);
-  for (let k = 0; diff > 0; k = (k + 1) % byRemainder.length, diff -= 1)
-    points[byRemainder[k].i] += 1;
-  while (diff < 0) {
-    let largest = -1;
-    points.forEach((p, i) => {
-      if (p > 1 && (largest < 0 || p > points[largest])) largest = i;
-    });
-    if (largest < 0) break;
-    points[largest] -= 1;
-    diff += 1;
-  }
-  return rubric.map((c, i) => ({ ...c, points: points[i] }));
 }
 
 export function newCriterion(section: string): Criterion {
