@@ -9,13 +9,20 @@ async function toResults(page: Page) {
   await page.goto("/vacancies");
   const ok = await page.evaluate(async () => {
     const post = async (action: object) => {
-      const s = await (await fetch("/api/workspace")).json();
-      const r = await fetch("/api/workspace", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ version: s.version, action }),
-      });
-      return r.json();
+      // Re-read the version and retry, since the page's own requests can
+      // move it between the read and the write.
+      for (let attempt = 0; ; attempt++) {
+        const s = await (await fetch("/api/workspace")).json();
+        const r = await fetch("/api/workspace", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ version: s.version, action }),
+        });
+        const body = await r.json();
+        if (r.ok) return body;
+        if (attempt === 3)
+          throw new Error(`${r.status} ${JSON.stringify(body)}`);
+      }
     };
     const ids = { vacancyId: "customer-success", batchId: "first-batch" };
     await post({ type: "publish", ...ids });
